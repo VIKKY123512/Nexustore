@@ -1462,6 +1462,17 @@
             const getLoader = () =>
                 `<div class="loader-container"><div class="nexus-loader"><div class="nexus-side front"></div><div class="nexus-side back"></div><div class="nexus-side left"></div><div class="nexus-side right"></div><div class="nexus-side top"></div><div class="nexus-side bottom"></div></div></div>`;
             let isPaused = false;
+            
+            function escapeHtml(text) {
+                if (!text) return text;
+                return text.toString()
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
             function showToast(msg, type = "info") {
                 const box = document.getElementById("toast-container");
                 const el = document.createElement("div");
@@ -2396,7 +2407,11 @@
             // Update nav when user logs in/out
             const originalSyncUserUI = syncUserUI;
             syncUserUI = function() {
-                originalSyncUserUI.call(this);
+                try {
+                    originalSyncUserUI.call(this);
+                } catch (err) {
+                    console.error("UI Sync Error:", err);
+                }
                 updateNavForUser();
             };
         </script>
