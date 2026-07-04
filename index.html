@@ -1248,13 +1248,27 @@
                         "
                     ></div>
                 </div>
+                <div id="sales-boosters" style="background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.4); border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center; display: none;">
+                    <div style="color: #ef4444; font-weight: 800; font-size: 0.85rem; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 5px;"><i class="fas fa-fire"></i> LIMITED TIME OFFER</div>
+                    <div id="det-timer" style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); font-family: monospace; margin-bottom: 8px; letter-spacing: 2px;">00:15:00</div>
+                    <div style="background: #ef4444; color: white; display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">Hurry! Only <span id="det-stock">3</span> left in stock</div>
+                </div>
+                
+                <div id="manage-product-header" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;">
+                    <h2 style="margin: 0 0 5px; color: #10b981; font-size: 1.2rem;"><i class="fas fa-rocket"></i> Your Product is Ready</h2>
+                    <p style="margin: 0; color: var(--text-sub); font-size: 0.85rem;">Access your downloads and content below.</p>
+                </div>
+
                 <div id="det-desc-box" class="desc-box"></div>
+                
                 <div
                     id="det-extra-links"
                     style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px"
                 ></div>
-                <button id="btn-dl" class="btn-main"><i class="fas fa-download"></i> DOWNLOAD</button
-                ><button id="btn-extra" class="btn-sec" style="display: none">Tutorial</button>
+                
+                <button id="btn-dl" class="btn-main" style="transition: all 0.3s ease;"><i class="fas fa-download"></i> DOWNLOAD</button>
+                <button id="btn-extra" class="btn-sec" style="display: none">Tutorial</button>
+                <a href="https://wa.me/message/" target="_blank" id="btn-whatsapp-support" class="btn-sec" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: white; border: none; margin-top: 10px;"><i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> WhatsApp Support</a>
             </div>
         </div>
         <div id="modal-profile" class="modal">
@@ -1396,8 +1410,7 @@
                     <div style="font-size: 0.8rem; color: var(--text-sub); display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="fas fa-shield-alt" style="color: #10b981;"></i><span>100% Secure & Encrypted</span></div>
                 </div>
 
-                <button class="btn-main" id="process-payment-btn" onclick="redirectToCosmofeed()" style="width: 100%; margin-bottom: 12px; padding: 18px; font-size: 1.1rem;"><i class="fas fa-lock"></i> Pay Now</button>
-                <button class="btn-sec" id="verify-payment-btn" onclick="verifyCosmofeedPayment()" style="width: 100%; margin-bottom: 12px; display: none; background: #10b981; color: white; border-color: #10b981;"><i class="fas fa-check-circle"></i> I Have Paid. Verify</button>
+                <button class="btn-main" id="process-payment-btn" onclick="redirectToCosmofeed()" style="width: 100%; margin-bottom: 12px; padding: 18px; font-size: 1.1rem;"><i class="fas fa-external-link-alt"></i> Proceed to Pay</button>
                 <button class="btn-sec" onclick="toggleModal('modal-payment', false)" style="width: 100%;">Cancel</button>
             </div>
         </div>
@@ -1441,6 +1454,18 @@
             });
             let scrollPos = {};
             let lastClickedId = null;
+            // 🔁 PAYMENT SUCCESS URL CAPTURING
+            const urlParams = new URLSearchParams(window.location.search);
+            let pendingSuccessProduct = urlParams.get("product") || urlParams.get("item") || localStorage.getItem("pending_product");
+            let isSuccessReturn = urlParams.get("status") === "success";
+
+            // Clean URL visually without reloading the page
+            if (isSuccessReturn) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            let countdownInterval = null;
+
             const viewport = document.getElementById("mobile-viewport");
             viewport.addEventListener("scroll", () => {
                 const activePage = document.querySelector(".page-view.active");
@@ -1578,6 +1603,13 @@
                             }
                             syncUserUI();
                             showToast("Signed In", "success");
+                            
+                            // 🔁 PAYMENT SUCCESS HANDLING LOGIC (Trigger after login verification)
+                            if (isSuccessReturn && pendingSuccessProduct) {
+                                // Short delay ensures database synced apps list is loaded
+                                setTimeout(() => processUrlSuccess(pendingSuccessProduct), 1000);
+                            }
+
                             if (msgListener) db.ref("messages").off("child_changed", msgListener);
                             msgListener = db
                                 .ref("messages")
@@ -1724,82 +1756,20 @@
                 }, 300);
             }
 
+            // 💳 SECURE PAYMENT REDIRECT
             function redirectToCosmofeed() {
                 if (!currentPaymentData) return;
                 
-                // Open cosmofeed link in new tab
-                window.open(currentPaymentData.cosmofeedLink, "_blank");
+                // Save state to handle the callback success redirect properly
+                localStorage.setItem("pending_product", currentPaymentData.appId);
                 
-                // Change UI to verify state
-                document.getElementById("process-payment-btn").style.display = "none";
-                document.getElementById("verify-payment-btn").style.display = "block";
+                // Redirect user exactly to payment link. It expects payment gateway config 
+                // to redirect back to: index.html?status=success&product=PRODUCT_ID
+                window.location.href = currentPaymentData.cosmofeedLink;
             }
 
-            function verifyCosmofeedPayment() {
-                if (!currentPaymentData) return;
-                
-                const btn = document.getElementById("verify-payment-btn");
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
-                btn.disabled = true;
-
-                // Simulate payment verification delay
-                setTimeout(() => {
-                    completePayment("cosmofeed");
-                }, 2000);
-            }
-
-            function completePayment(method) {
-                // Save payment to database
-                db.ref("payments").push({
-                    orderId: currentPaymentData.orderId,
-                    userId: currentUser.id,
-                    appId: currentPaymentData.appId,
-                    appTitle: currentPaymentData.appTitle,
-                    amount: currentPaymentData.amount,
-                    method: method,
-                    status: "success",
-                    timestamp: Date.now(),
-                    completedAt: Date.now(),
-                });
-
-                // Add to user purchases
-                if (!currentUser.purchases) currentUser.purchases = [];
-                
-                currentUser.purchases.push({
-                    appId: currentPaymentData.appId,
-                    appTitle: currentPaymentData.appTitle,
-                    purchaseDate: Date.now(),
-                    orderId: currentPaymentData.orderId,
-                    amount: currentPaymentData.amount,
-                });
-
-                db.ref("users/" + currentUser.id).update({
-                    purchases: currentUser.purchases,
-                });
-
-                // Send confirmation message
-                db.ref("messages").push({
-                    user: currentUser.id,
-                    userName: currentUser.name,
-                    email: currentUser.email,
-                    title: "Payment Successful ✓",
-                    body: `Payment of ₹${currentPaymentData.amount} for ${currentPaymentData.appTitle} has been confirmed. You are now a VIP. You can now download the app.`,
-                    timestamp: Date.now(),
-                    type: "payment_confirmation",
-                    orderId: currentPaymentData.orderId,
-                });
-
-                toggleModal("modal-payment", false);
-                
-                // Show PhonePe style green overlay
-                document.getElementById("payment-success-overlay").style.display = "flex";
-                syncUserUI(); // Immediately reflect VIP badge
-
-                const btn = document.getElementById("verify-payment-btn");
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> I Have Paid. Verify';
-                currentPaymentData = null;
-            }
+            // Kept for backward compatibility error avoidance, real processing happens via processUrlSuccess()
+            function completePayment(method) { }
 
             function closeSuccessOverlay() {
                 document.getElementById("payment-success-overlay").style.display = "none";
@@ -2015,6 +1985,77 @@
                     }
                 }, 300);
             });
+            // 🚀 PROCESS URL SUCCESS REDIRECT (NO BACKEND REQUIRED)
+            function processUrlSuccess(productId) {
+                isSuccessReturn = false; // Prevent double trigger
+                localStorage.removeItem("pending_product");
+                
+                const app = allApps.find(a => a.id === productId);
+                
+                // Prevent duplicate purchases
+                if (currentUser.purchases && currentUser.purchases.some(p => p.appId === productId)) {
+                    navTo("purchases");
+                    setTimeout(() => openDetail(productId), 500);
+                    return;
+                }
+
+                // Unlock Product
+                if (!currentUser.purchases) currentUser.purchases = [];
+                currentUser.purchases.push({
+                    appId: productId,
+                    appTitle: app ? app.title : "Unknown Product",
+                    purchaseDate: Date.now(),
+                    orderId: "ORD_" + Date.now(),
+                    amount: app ? app.price : 0,
+                });
+
+                // Save to Database
+                db.ref("payments").push({
+                    orderId: "ORD_" + Date.now(),
+                    userId: currentUser.id,
+                    appId: productId,
+                    appTitle: app ? app.title : "Unknown Product",
+                    amount: app ? app.price : 0,
+                    method: "url_redirect_verification",
+                    status: "success",
+                    timestamp: Date.now(),
+                });
+
+                db.ref("users/" + currentUser.id).update({ purchases: currentUser.purchases });
+
+                // UI Success Handling
+                const overlay = document.getElementById("payment-success-overlay");
+                overlay.innerHTML = `
+                    <div class="success-circle"><i class="fas fa-check"></i></div>
+                    <h2 style="margin: 0 0 10px; font-weight: 800; font-size: 2rem; text-align: center;">Payment Successful 🎉</h2>
+                    <p style="margin: 0 0 30px; font-size: 1.1rem; opacity: 0.9; text-align: center;">Your product is unlocked!</p>
+                    <div style="font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 10px 20px; border-radius: 20px;">Redirecting to manage product...</div>
+                `;
+                overlay.style.display = "flex";
+                syncUserUI(); // Attach VIP UI
+
+                // Auto Redirect after 3 Seconds
+                setTimeout(() => {
+                    overlay.style.display = "none";
+                    navTo("purchases");
+                    setTimeout(() => openDetail(productId), 500); // 📦 MANAGE PRODUCT PAGE (Unlock Content)
+                }, 3000);
+            }
+
+            // ⚡ OPTIONAL FEATURES: Sales Boosters
+            function startCountdown() {
+                clearInterval(countdownInterval);
+                let time = 15 * 60; // 15 mins
+                const timerEl = document.getElementById("det-timer");
+                countdownInterval = setInterval(() => {
+                    let m = Math.floor(time / 60);
+                    let s = time % 60;
+                    timerEl.innerText = `00:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+                    if(time <= 0) clearInterval(countdownInterval);
+                    time--;
+                }, 1000);
+            }
+
             function openDetail(id) {
                 lastClickedId = id;
                 const app = allApps.find((a) => a.id === id);
@@ -2073,21 +2114,38 @@
                     extBtn.style.display = "none";
                 }
                 
-                // Handle download/buy button
+                // UI LOGIC FOR MANAGE PRODUCT VS SALES BOOSTERS
+                const salesBoosters = document.getElementById("sales-boosters");
+                const manageHeader = document.getElementById("manage-product-header");
                 const dlBtn = document.getElementById("btn-dl");
+                dlBtn.style.animation = "none";
                 
                 if (alreadyOwns) {
+                    // Show Download Access Page
+                    salesBoosters.style.display = "none";
+                    manageHeader.style.display = "block";
                     dlBtn.style.display = "block";
-                    dlBtn.innerHTML = '<i class="fas fa-download"></i> DOWNLOAD';
+                    dlBtn.innerHTML = '<i class="fas fa-download"></i> ACCESS DOWNLOAD NOW';
+                    dlBtn.style.background = "var(--accent-gradient)";
                     dlBtn.onclick = () => handleDownload(app);
                 } else if (app.price && app.price > 0) {
+                    // Show Sales Pitch (Countdown + Stock)
+                    salesBoosters.style.display = "block";
+                    manageHeader.style.display = "none";
+                    document.getElementById("det-stock").innerText = Math.floor(Math.random() * 5) + 2; // Random fake stock
+                    startCountdown();
+                    
                     dlBtn.style.display = "block";
-                    dlBtn.innerHTML = `<i class="fas fa-shopping-bag"></i> BUY FOR ₹${app.price}`;
-                    dlBtn.style.background = "linear-gradient(135deg, #a855f7, #ec4899)";
+                    dlBtn.innerHTML = `<i class="fas fa-bolt"></i> BUY NOW FOR ₹${app.price}`;
+                    dlBtn.style.background = "var(--premium-gradient)";
+                    dlBtn.style.animation = "pulse-premium 1.5s infinite alternate";
                     dlBtn.onclick = () => initPayment(app.id, app.title, app.price);
                 } else {
+                    // Free app
+                    salesBoosters.style.display = "none";
+                    manageHeader.style.display = "none";
                     dlBtn.style.display = "block";
-                    dlBtn.innerHTML = '<i class="fas fa-download"></i> DOWNLOAD';
+                    dlBtn.innerHTML = '<i class="fas fa-download"></i> DOWNLOAD FREE';
                     dlBtn.style.background = "var(--accent-gradient)";
                     dlBtn.onclick = () => handleDownload(app);
                 }
