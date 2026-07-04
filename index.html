@@ -38,18 +38,6 @@
                 --glow-accent: 0 0 20px rgba(16, 185, 129, 0.25);
                 --font-body: "Outfit", sans-serif;
             }
-            body.light-mode {
-                --bg-color: #f0fdfa;
-                --bg-gradient: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 100%);
-                --glass-header: rgba(255, 255, 255, 0.85);
-                --glass-border: rgba(6, 182, 212, 0.2);
-                --text-main: #0f172a;
-                --text-sub: #475569;
-                --card-bg: #ffffff;
-                --modal-bg: #ffffff;
-                --shadow-card: 0 4px 15px rgba(6, 182, 212, 0.1);
-                --glow-accent: 0 5px 15px rgba(6, 182, 212, 0.2);
-            }
             body {
                 margin: 0;
                 background: var(--bg-color);
@@ -1078,7 +1066,6 @@
             <header>
                 <div class="logo"><i class="fas fa-cube"></i> NEXUSTORE</div>
                 <div class="header-actions">
-                    <div class="icon-btn" onclick="toggleTheme()"><i class="fas fa-adjust"></i></div>
                     <div class="icon-btn" onclick="toggleNotifs()">
                         <i class="far fa-bell"></i>
                         <div class="notif-dot" id="notif-dot"></div>
@@ -1136,7 +1123,7 @@
                 <div id="purchases-page" class="page-view">
                     <div class="clickable-header" onclick="goHome()">
                         <div class="icon-btn"><i class="fas fa-arrow-left"></i></div>
-                        <h3 style="margin: 0">My Purchases</h3>
+                        <h3 style="margin: 0">My Purchases <span id="purchase-count" style="color: var(--text-sub); font-weight: 400;">0</span></h3>
                     </div>
                     <div id="purchases-grid" class="grid"></div>
                 </div>
@@ -1251,7 +1238,6 @@
                 <div id="sales-boosters" style="background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.4); border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center; display: none;">
                     <div style="color: #ef4444; font-weight: 800; font-size: 0.85rem; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 5px;"><i class="fas fa-fire"></i> LIMITED TIME OFFER</div>
                     <div id="det-timer" style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); font-family: monospace; margin-bottom: 8px; letter-spacing: 2px;">00:15:00</div>
-                    <div style="background: #ef4444; color: white; display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">Hurry! Only <span id="det-stock">3</span> left in stock</div>
                 </div>
                 
                 <div id="manage-product-header" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;">
@@ -1415,7 +1401,6 @@
             </div>
         </div>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -1454,13 +1439,15 @@
             });
             let scrollPos = {};
             let lastClickedId = null;
-            // 🔁 PAYMENT SUCCESS URL CAPTURING
+            // The URL can carry a hint that a payment just happened (for a nicer landing
+            // experience), but it is NEVER treated as proof of payment. Actual purchase
+            // status always comes from the live "orders" listener below, which only
+            // changes when the admin verifies it in admin.html.
             const urlParams = new URLSearchParams(window.location.search);
-            let pendingSuccessProduct = urlParams.get("product") || urlParams.get("item") || localStorage.getItem("pending_product");
-            let isSuccessReturn = urlParams.get("status") === "success";
-
-            // Clean URL visually without reloading the page
-            if (isSuccessReturn) {
+            const returnedFromPayment = urlParams.get("status") === "success";
+            const returnedProductId = urlParams.get("product") || urlParams.get("item");
+            let paymentReturnHandled = false;
+            if (returnedFromPayment) {
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
 
@@ -1519,15 +1506,6 @@
                     el.classList.remove("active");
                     isPaused = false;
                 }
-            }
-            function toggleTheme() {
-                document.body.classList.toggle("light-mode");
-                const isLight = document.body.classList.contains("light-mode");
-                localStorage.setItem("theme", isLight ? "light" : "dark");
-                updateParticlesColor(isLight);
-            }
-            if (localStorage.getItem("theme") === "light") {
-                document.body.classList.add("light-mode");
             }
             function togglePass(id, icon) {
                 const input = document.getElementById(id);
@@ -1603,12 +1581,14 @@
                             }
                             syncUserUI();
                             showToast("Signed In", "success");
-                            
-                            // 🔁 PAYMENT SUCCESS HANDLING LOGIC (Trigger after login verification)
-                            if (isSuccessReturn && pendingSuccessProduct) {
-                                // Short delay ensures database synced apps list is loaded
-                                setTimeout(() => processUrlSuccess(pendingSuccessProduct), 1000);
+
+                            if (returnedFromPayment && !paymentReturnHandled) {
+                                paymentReturnHandled = true;
+                                showToast("Confirming your payment — check My Purchases for status", "info");
+                                setTimeout(() => navTo("purchases"), 600);
                             }
+
+                            attachOrdersListener(user.uid);
 
                             if (msgListener) db.ref("messages").off("child_changed", msgListener);
                             msgListener = db
@@ -1624,6 +1604,11 @@
                         });
                 } else {
                     currentUser = null;
+                    if (ordersListener) {
+                        db.ref("orders").off("value", ordersListener);
+                        ordersListener = null;
+                    }
+                    currentUserOrders = {};
                     syncUserUI();
                 }
             });
@@ -1639,11 +1624,17 @@
                 if (!e || !p) return showToast("Empty fields", "error");
                 auth.signInWithEmailAndPassword(e, p).catch((err) => showToast("Login Failed", "error"));
             }
+            function generateDisplayName() {
+                const adj = ["Swift", "Cosmic", "Nova", "Turbo", "Silent", "Blazing", "Lunar", "Crimson", "Shadow", "Electric"];
+                const noun = ["Falcon", "Tiger", "Phoenix", "Wolf", "Panther", "Comet", "Raptor", "Dragon", "Ninja", "Ranger"];
+                const num = Math.floor(Math.random() * 900) + 100;
+                return adj[Math.floor(Math.random() * adj.length)] + noun[Math.floor(Math.random() * noun.length)] + num;
+            }
             function userRegister() {
-                const n = document.getElementById("reg-name").value;
+                const n = document.getElementById("reg-name").value.trim() || generateDisplayName();
                 const e = document.getElementById("reg-email").value;
                 const p = document.getElementById("reg-pass").value;
-                if (!n || !e || !p) return showToast("Empty fields", "error");
+                if (!e || !p) return showToast("Empty fields", "error");
                 auth.createUserWithEmailAndPassword(e, p)
                     .then((u) => {
                         db.ref("users/" + u.user.uid).set({
@@ -1670,34 +1661,30 @@
                     openAuth();
                     return;
                 }
-
                 document.querySelectorAll(".page-view").forEach((p) => p.classList.remove("active"));
                 document.getElementById("purchases-page").classList.add("active");
                 restoreScroll("purchases-page");
-                
+                renderPurchases();
+            }
+            function downloadPurchase(productId) {
+                const app = allApps.find((a) => a.id === productId);
+                if (app) handleDownload(app);
+            }
+            function submitPaymentRef(orderId) {
+                const input = document.getElementById("ref-input-" + orderId);
+                const val = input ? input.value.trim() : "";
+                if (!val) return;
+                db.ref("orders/" + orderId + "/paymentRef").set(val);
+                showToast("Reference submitted", "success");
+            }
+            function renderPurchases() {
                 const grid = document.getElementById("purchases-grid");
+                if (!grid) return;
                 grid.innerHTML = "";
-
-                if (currentUser.purchases && currentUser.purchases.length > 0) {
-                    document.getElementById("purchase-count").innerText = currentUser.purchases.length;
-                    
-                    currentUser.purchases.forEach((purchase) => {
-                        const app = allApps.find((a) => a.id === purchase.appId);
-                        if (app) {
-                            const purchaseDate = new Date(purchase.purchaseDate).toLocaleDateString('en-IN');
-                            grid.innerHTML += `
-                                <div class="card" onclick="openDetail('${app.id}')" style="position: relative; cursor: pointer;">
-                                    <div style="position: absolute; top: 10px; right 10px; z-index: 5; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">✓ OWNED</div>
-                                    <img src="${app.logo}" style="width: 100%; height: 90px; object-fit: contain; margin-bottom: 15px; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));"/>
-                                    <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${app.title}</h3>
-                                    <p style="font-size: 0.75rem; color: #10b981; margin: 0 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${app.category}</p>
-                                    <div style="font-size: 0.7rem; color: var(--text-sub); margin-top: 10px; border-top: 1px solid var(--glass-border); padding-top: 8px;">Purchased: ${purchaseDate}</div>
-                                    <button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="event.stopPropagation(); handleDownload(${JSON.stringify(app).replace(/"/g, '&quot;')})"><i class="fas fa-download"></i> Download</button>
-                                </div>
-                            `;
-                        }
-                    });
-                } else {
+                const entries = currentUser ? Object.entries(currentUserOrders) : [];
+                const countEl = document.getElementById("purchase-count");
+                if (countEl) countEl.innerText = entries.filter(([, o]) => o.status === "verified").length;
+                if (entries.length === 0) {
                     grid.innerHTML = `
                         <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; color: var(--text-sub);">
                             <i class="fas fa-shopping-bag" style="font-size: 3rem; opacity: 0.3; margin-bottom: 15px; display: block;"></i>
@@ -1706,49 +1693,133 @@
                             <button class="btn-main" style="width: auto; padding: 10px 20px; margin-top: 20px; font-size: 0.9rem;" onclick="goHome()"><i class="fas fa-shopping-cart"></i> Browse Apps</button>
                         </div>
                     `;
+                    return;
                 }
+                entries.forEach(([productId, order]) => {
+                    const app = allApps.find((a) => a.id === productId);
+                    const title = app ? app.title : "Product";
+                    const logo = app ? app.logo : "";
+                    const category = app ? (app.category || "") : "";
+                    const verified = order.status === "verified";
+                    const badge = verified
+                        ? '<span style="color:#10b981; font-weight:700;">✓ Verified</span>'
+                        : '<span style="color:#f59e0b; font-weight:700;">⏳ Pending Verification</span>';
+                    let extra;
+                    if (verified) {
+                        extra = `<button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="downloadPurchase('${productId}')"><i class="fas fa-download"></i> Download</button>`;
+                    } else if (order.paymentRef) {
+                        extra = `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 10px;">Reference submitted: ${order.paymentRef}</div>`;
+                    } else {
+                        extra = `<div style="display: flex; gap: 6px; margin-top: 10px;" onclick="event.stopPropagation()">
+                            <input type="text" id="ref-input-${order.orderId}" class="inp" placeholder="Payment ref / UTR (optional)" style="margin-bottom: 0; font-size: 0.8rem;" />
+                            <button class="btn-sec" style="width: auto; padding: 0 14px; margin-bottom: 0;" onclick="submitPaymentRef('${order.orderId}')">Submit</button>
+                        </div>`;
+                    }
+                    grid.innerHTML += `
+                        <div class="card" onclick="openDetail('${productId}')" style="position: relative; cursor: pointer;">
+                            <div style="position: absolute; top: 10px; right: 10px; z-index: 5; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">${
+                                verified ? "✓ OWNED" : "PENDING"
+                            }</div>
+                            <img src="${logo}" style="width: 100%; height: 90px; object-fit: contain; margin-bottom: 15px; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));"/>
+                            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${title}</h3>
+                            <p style="font-size: 0.75rem; color: #10b981; margin: 0 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${category}</p>
+                            <div style="font-size: 0.7rem; color: var(--text-sub);">₹${order.amount || 0} · ${badge}</div>
+                            ${extra}
+                        </div>
+                    `;
+                });
             }
 
             // ============ PAYMENT SYSTEM (COSMOFEED) ============
             let currentPaymentData = null;
+            let ordersListener = null;
+            let currentUserOrders = {}; // productId -> {orderId, status, amount, paymentRef}
+            let ordersFirstLoad = true;
+
+            function attachOrdersListener(uid) {
+                if (ordersListener) db.ref("orders").off("value", ordersListener);
+                ordersFirstLoad = true;
+                ordersListener = db
+                    .ref("orders")
+                    .orderByChild("userId")
+                    .equalTo(uid)
+                    .on("value", (snap) => {
+                        const previous = currentUserOrders;
+                        const next = {};
+                        Object.entries(snap.val() || {}).forEach(([oid, o]) => {
+                            const ex = next[o.productId];
+                            if (!ex || o.status === "verified" || (o.status === "pending" && ex.status !== "verified")) {
+                                next[o.productId] = {
+                                    orderId: oid,
+                                    status: o.status,
+                                    amount: o.amount,
+                                    paymentRef: o.paymentRef || "",
+                                };
+                            }
+                        });
+                        currentUserOrders = next;
+                        if (!ordersFirstLoad) {
+                            Object.entries(next).forEach(([productId, order]) => {
+                                const was = previous[productId];
+                                if (order.status === "verified" && (!was || was.status !== "verified")) {
+                                    celebrateUnlock(productId);
+                                }
+                            });
+                        }
+                        ordersFirstLoad = false;
+                        const openApp = allApps.find((a) => a.id === lastClickedId);
+                        if (openApp) refreshDetailButton(openApp);
+                        if (document.getElementById("purchases-page").classList.contains("active")) renderPurchases();
+                    });
+            }
+
+            function celebrateUnlock(productId) {
+                const app = allApps.find((a) => a.id === productId);
+                const overlay = document.getElementById("payment-success-overlay");
+                overlay.innerHTML = `
+                    <div class="success-circle"><i class="fas fa-check"></i></div>
+                    <h2 style="margin: 0 0 10px; font-weight: 800; font-size: 2rem; text-align: center;">Payment Verified 🎉</h2>
+                    <p style="margin: 0 0 30px; font-size: 1.1rem; opacity: 0.9; text-align: center;">${
+                        app ? escapeHtml(app.title) : "Your product"
+                    } is unlocked!</p>
+                    <button class="btn-main" style="background: white; color: #10b981; max-width: 200px;" onclick="closeSuccessOverlay()">View Purchase</button>
+                `;
+                overlay.style.display = "flex";
+                setTimeout(() => {
+                    if (overlay.style.display !== "none") closeSuccessOverlay();
+                }, 4000);
+            }
 
             function initPayment(appId, appTitle, price) {
                 if (!currentUser) {
                     openAuth();
                     return;
                 }
-
                 if (!appId || !appTitle || !price || price <= 0) {
                     showToast("Invalid payment details", "error");
                     return;
                 }
-
-                // Check if already purchased
-                if (currentUser.purchases && currentUser.purchases.some(p => p.appId === appId)) {
+                const existing = currentUserOrders[appId];
+                if (existing && existing.status === "verified") {
                     showToast("You already own this app!", "info");
                     toggleModal("modal-detail", false);
                     return;
                 }
-
-                const app = allApps.find(a => a.id === appId);
+                if (existing && existing.status === "pending") {
+                    showToast("Payment already pending verification for this item", "info");
+                    toggleModal("modal-detail", false);
+                    navTo("purchases");
+                    return;
+                }
+                const app = allApps.find((a) => a.id === appId);
                 if (!app || !app.cosmofeedLink) {
                     showToast("Payment link not configured for this product.", "error");
                     return;
                 }
-
-                currentPaymentData = {
-                    appId: appId,
-                    appTitle: appTitle,
-                    amount: price,
-                    orderId: "ORD_" + Date.now(),
-                    cosmofeedLink: app.cosmofeedLink
-                };
-
+                currentPaymentData = { appId, appTitle, amount: price, cosmofeedLink: app.cosmofeedLink };
                 document.getElementById("payment-amount").innerText = "₹" + price;
-                document.getElementById("payment-order-id").innerText = currentPaymentData.orderId;
-                
+                document.getElementById("payment-order-id").innerText = "Created on payment";
                 document.getElementById("process-payment-btn").style.display = "block";
-                document.getElementById("verify-payment-btn").style.display = "none";
 
                 toggleModal("modal-detail", false);
                 setTimeout(() => {
@@ -1756,20 +1827,28 @@
                 }, 300);
             }
 
-            // 💳 SECURE PAYMENT REDIRECT
+            // Creates the real order record FIRST (so it exists no matter what happens
+            // on Cosmofeed's side), then redirects. Nothing here marks it as paid -
+            // that only happens when an admin verifies it in admin.html.
             function redirectToCosmofeed() {
-                if (!currentPaymentData) return;
-                
-                // Save state to handle the callback success redirect properly
-                localStorage.setItem("pending_product", currentPaymentData.appId);
-                
-                // Redirect user exactly to payment link. It expects payment gateway config 
-                // to redirect back to: index.html?status=success&product=PRODUCT_ID
-                window.location.href = currentPaymentData.cosmofeedLink;
+                if (!currentPaymentData || !currentUser) return;
+                const ref = db.ref("orders").push();
+                ref.set({
+                    userId: currentUser.id,
+                    userEmail: currentUser.email,
+                    userName: currentUser.name,
+                    productId: currentPaymentData.appId,
+                    productTitle: currentPaymentData.appTitle,
+                    amount: currentPaymentData.amount,
+                    status: "pending",
+                    createdAt: Date.now(),
+                });
+                document.getElementById("payment-order-id").innerText = ref.key;
+                toggleModal("modal-payment", false);
+                window.open(currentPaymentData.cosmofeedLink, "_blank");
+                showToast("Complete payment, then check My Purchases", "success");
+                setTimeout(() => navTo("purchases"), 500);
             }
-
-            // Kept for backward compatibility error avoidance, real processing happens via processUrlSuccess()
-            function completePayment(method) { }
 
             function closeSuccessOverlay() {
                 document.getElementById("payment-success-overlay").style.display = "none";
@@ -1813,7 +1892,7 @@
                         openAuth();
                     };
                 } else {
-                    const isVIP = currentUser.purchases && currentUser.purchases.length > 0;
+                    const isVIP = Object.values(currentUserOrders).some((o) => o.status === "verified");
                     const vipHtml = isVIP ? `<img src="bluetick.png" class="vip-badge-icon">` : '';
                     
                     document.getElementById("hud-name").innerHTML = `<div class="vip-badge-container">${escapeHtml(currentUser.name)} ${vipHtml}</div>`;
@@ -1833,6 +1912,7 @@
                         });
                     };
                 }
+                document.getElementById("nav-purchases").style.display = currentUser ? "flex" : "none";
             }
             function handleAuthAction() {}
             function navTo(page) {
@@ -1852,37 +1932,6 @@
                 }
             }
 
-            function openPurchases() {
-                document.querySelectorAll(".page-view").forEach((p) => p.classList.remove("active"));
-                document.getElementById("purchases-page").classList.add("active");
-                
-                const grid = document.getElementById("purchases-grid");
-                grid.innerHTML = "";
-
-                if (currentUser && currentUser.purchases && currentUser.purchases.length > 0) {
-                    currentUser.purchases.forEach((purchase) => {
-                        const app = allApps.find((a) => a.id === purchase.appId);
-                        if (app) {
-                            const purchaseDate = new Date(purchase.purchaseDate).toLocaleDateString();
-                            grid.innerHTML += `
-                                <div class="card" onclick="openDetail('${app.id}')" style="position: relative; cursor: pointer;">
-                                    <div style="position: absolute; top: 10px; left: 10px; background: linear-gradient(135deg, #a855f7, #ec4899); color: white; font-size: 0.65rem; font-weight: 800; padding: 4px 12px; border-radius: 8px; text-transform: uppercase;">OWNED</div>
-                                    <img src="${app.logo}">
-                                    <h3>${app.title}</h3>
-                                    <p>${purchaseDate}</p>
-                                </div>
-                            `;
-                        }
-                    });
-                    if (grid.innerHTML === "") {
-                        grid.innerHTML = '<p style="text-align:center; color:var(--text-sub); grid-column: 1/-1;">No purchases yet</p>';
-                    }
-                } else {
-                    grid.innerHTML = '<p style="text-align:center; color:var(--text-sub); grid-column: 1/-1;">No purchases yet</p>';
-                }
-
-                restoreScroll("purchases-page");
-            }
             function goHome() {
                 navTo("home");
                 restoreScroll("home-page");
@@ -1985,63 +2034,6 @@
                     }
                 }, 300);
             });
-            // 🚀 PROCESS URL SUCCESS REDIRECT (NO BACKEND REQUIRED)
-            function processUrlSuccess(productId) {
-                isSuccessReturn = false; // Prevent double trigger
-                localStorage.removeItem("pending_product");
-                
-                const app = allApps.find(a => a.id === productId);
-                
-                // Prevent duplicate purchases
-                if (currentUser.purchases && currentUser.purchases.some(p => p.appId === productId)) {
-                    navTo("purchases");
-                    setTimeout(() => openDetail(productId), 500);
-                    return;
-                }
-
-                // Unlock Product
-                if (!currentUser.purchases) currentUser.purchases = [];
-                currentUser.purchases.push({
-                    appId: productId,
-                    appTitle: app ? app.title : "Unknown Product",
-                    purchaseDate: Date.now(),
-                    orderId: "ORD_" + Date.now(),
-                    amount: app ? app.price : 0,
-                });
-
-                // Save to Database
-                db.ref("payments").push({
-                    orderId: "ORD_" + Date.now(),
-                    userId: currentUser.id,
-                    appId: productId,
-                    appTitle: app ? app.title : "Unknown Product",
-                    amount: app ? app.price : 0,
-                    method: "url_redirect_verification",
-                    status: "success",
-                    timestamp: Date.now(),
-                });
-
-                db.ref("users/" + currentUser.id).update({ purchases: currentUser.purchases });
-
-                // UI Success Handling
-                const overlay = document.getElementById("payment-success-overlay");
-                overlay.innerHTML = `
-                    <div class="success-circle"><i class="fas fa-check"></i></div>
-                    <h2 style="margin: 0 0 10px; font-weight: 800; font-size: 2rem; text-align: center;">Payment Successful 🎉</h2>
-                    <p style="margin: 0 0 30px; font-size: 1.1rem; opacity: 0.9; text-align: center;">Your product is unlocked!</p>
-                    <div style="font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 10px 20px; border-radius: 20px;">Redirecting to manage product...</div>
-                `;
-                overlay.style.display = "flex";
-                syncUserUI(); // Attach VIP UI
-
-                // Auto Redirect after 3 Seconds
-                setTimeout(() => {
-                    overlay.style.display = "none";
-                    navTo("purchases");
-                    setTimeout(() => openDetail(productId), 500); // 📦 MANAGE PRODUCT PAGE (Unlock Content)
-                }, 3000);
-            }
-
             // ⚡ OPTIONAL FEATURES: Sales Boosters
             function startCountdown() {
                 clearInterval(countdownInterval);
@@ -2061,9 +2053,11 @@
                 const app = allApps.find((a) => a.id === id);
                 if (!app) return;
 
-                // Check if user owns this app
-                const alreadyOwns = currentUser && currentUser.purchases && 
-                    currentUser.purchases.some(p => p.appId === id);
+                // Ownership now comes from the live, admin-verified orders listener —
+                // never from anything the client alone can set.
+                const order = currentUserOrders[id];
+                const alreadyOwns = order && order.status === "verified";
+                const isPending = order && order.status === "pending";
 
                 document.getElementById("det-img").src = app.logo;
                 document.getElementById("det-title").innerText = app.title;
@@ -2121,18 +2115,32 @@
                 dlBtn.style.animation = "none";
                 
                 if (alreadyOwns) {
-                    // Show Download Access Page
+                    // Verified purchase - show Download Access
                     salesBoosters.style.display = "none";
+                    manageHeader.innerHTML =
+                        '<h2 style="margin: 0 0 5px; color: #10b981; font-size: 1.2rem;"><i class="fas fa-rocket"></i> Your Product is Ready</h2>' +
+                        '<p style="margin: 0; color: var(--text-sub); font-size: 0.85rem;">Access your downloads and content below.</p>';
                     manageHeader.style.display = "block";
                     dlBtn.style.display = "block";
                     dlBtn.innerHTML = '<i class="fas fa-download"></i> ACCESS DOWNLOAD NOW';
                     dlBtn.style.background = "var(--accent-gradient)";
                     dlBtn.onclick = () => handleDownload(app);
+                } else if (isPending) {
+                    // Order placed, waiting on admin verification - never auto-unlocks itself
+                    salesBoosters.style.display = "none";
+                    manageHeader.innerHTML =
+                        '<h2 style="margin: 0 0 5px; color: #f59e0b; font-size: 1.2rem;"><i class="fas fa-hourglass-half"></i> Payment Pending Verification</h2>' +
+                        '<p style="margin: 0; color: var(--text-sub); font-size: 0.85rem;">Usually confirmed within a few hours. You\'ll be notified the moment it unlocks.</p>';
+                    manageHeader.style.display = "block";
+                    dlBtn.style.display = "block";
+                    dlBtn.innerHTML = '<i class="fas fa-hourglass-half"></i> PENDING VERIFICATION';
+                    dlBtn.style.background = "#94a3b8";
+                    dlBtn.onclick = () =>
+                        showToast("Your payment is being verified. Check My Purchases for updates.", "info");
                 } else if (app.price && app.price > 0) {
-                    // Show Sales Pitch (Countdown + Stock)
+                    // Not purchased yet - show Buy Now
                     salesBoosters.style.display = "block";
                     manageHeader.style.display = "none";
-                    document.getElementById("det-stock").innerText = Math.floor(Math.random() * 5) + 2; // Random fake stock
                     startCountdown();
                     
                     dlBtn.style.display = "block";
@@ -2152,19 +2160,33 @@
                 
                 toggleModal("modal-detail", true);
             }
+            // Re-applies the same button/banner state as openDetail without reopening the
+            // modal - used when a live order update arrives while the sheet is already open.
+            function refreshDetailButton(app) {
+                if (!app || !document.getElementById("modal-detail").classList.contains("active")) return;
+                if (lastClickedId === app.id) openDetail(app.id);
+            }
             function handleDownload(app) {
                 if (!currentUser) {
                     toggleModal("modal-detail", false);
                     setTimeout(() => openAuth(), 300);
                     return;
                 }
-                const today = new Date().toDateString();
-                const last = new Date(currentUser.lastDownloadDate || 0).toDateString();
-                let count = currentUser.dailyDownloads || 0;
-                if (today !== last) count = 0;
-                if (count >= globalDownloadLimit) return showToast("Daily Limit Reached", "error");
+                const order = currentUserOrders[app.id];
+                const isPaidApp = app.price && app.price > 0;
+                if (isPaidApp && (!order || order.status !== "verified")) {
+                    return showToast("Purchase required before downloading this item", "error");
+                }
+                if (!isPaidApp) {
+                    // Free-tier daily cap only applies to apps with no price set.
+                    const today = new Date().toDateString();
+                    const last = new Date(currentUser.lastDownloadDate || 0).toDateString();
+                    let count = currentUser.dailyDownloads || 0;
+                    if (today !== last) count = 0;
+                    if (count >= globalDownloadLimit) return showToast("Daily Limit Reached", "error");
+                    db.ref("users/" + currentUser.id).update({ dailyDownloads: count + 1, lastDownloadDate: Date.now() });
+                }
                 showToast("Starting Download...", "success");
-                db.ref("users/" + currentUser.id).update({ dailyDownloads: count + 1, lastDownloadDate: Date.now() });
                 db.ref("apps/" + app.id + "/downloads").transaction((c) => (c || 0) + 1);
                 db.ref("downloads_log").push({
                     appName: app.title,
@@ -2353,8 +2375,9 @@
                     this.wobbleSpeed = Math.random() * 0.04 + 0.01;
                     this.popped = false;
                     this.popParticles = [];
-                    const isLight = document.body.classList.contains("light-mode");
-                    const colorVal = isLight ? "6, 182, 212" : "16, 185, 129";
+                    const palette = ["16,185,129", "34,211,238", "168,85,247", "244,114,182", "250,204,21"];
+                    const colorVal = palette[Math.floor(Math.random() * palette.length)];
+                    this.rgb = colorVal;
                     this.color = `rgba(${colorVal}, ${Math.random() * 0.3 + 0.1})`;
                     this.stroke = `rgba(${colorVal}, 0.5)`;
                 }
@@ -2381,8 +2404,7 @@
                         this.popParticles.forEach(p => {
                             ctx.beginPath();
                             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                            const isLight = document.body.classList.contains("light-mode");
-                            ctx.fillStyle = `rgba(${isLight ? '6,182,212' : '16,185,129'}, ${p.life})`;
+                            ctx.fillStyle = `rgba(${this.rgb}, ${p.life})`;
                             ctx.fill();
                         });
                         return;
@@ -2433,13 +2455,6 @@
                     }
                 });
             });
-            function updateParticlesColor(isLight) {
-                bubbles.forEach(b => {
-                    const colorVal = isLight ? "6, 182, 212" : "16, 185, 129";
-                    b.color = `rgba(${colorVal}, ${Math.random() * 0.3 + 0.1})`;
-                    b.stroke = `rgba(${colorVal}, 0.5)`;
-                });
-            }
             db.ref("site_settings/popup").once("value", (s) => {
                 const p = s.val() || { title: "Welcome to Nexus", msg: "Enjoy premium apps & tools.", active: true };
                 if (p.active) {
@@ -2453,25 +2468,6 @@
                 sessionStorage.setItem("welcomed", true);
             }
 
-            // Show purchases nav only when logged in
-            function updateNavForUser() {
-                if (currentUser) {
-                    document.getElementById("nav-purchases").style.display = "flex";
-                } else {
-                    document.getElementById("nav-purchases").style.display = "none";
-                }
-            }
-
-            // Update nav when user logs in/out
-            const originalSyncUserUI = syncUserUI;
-            syncUserUI = function() {
-                try {
-                    originalSyncUserUI.call(this);
-                } catch (err) {
-                    console.error("UI Sync Error:", err);
-                }
-                updateNavForUser();
-            };
         </script>
     </body>
 </html>
