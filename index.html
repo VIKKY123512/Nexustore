@@ -296,24 +296,16 @@
                 border-radius: 10px;
                 box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
             }
-            /* OPTION A: Horizontal Cinematic Slider for Sectors */
+            /* Vertical Sectors Display */
             .sector-grid {
                 display: flex;
-                flex-direction: row;
-                overflow-x: auto;
-                scroll-snap-type: x mandatory;
+                flex-direction: column;
                 gap: 15px;
+                width: 100%;
                 padding-bottom: 20px;
-                scroll-behavior: smooth;
-                -webkit-overflow-scrolling: touch;
-            }
-            .sector-grid::-webkit-scrollbar {
-                display: none;
             }
             .sector-card {
-                min-width: 85%;
-                scroll-snap-align: center;
-                flex-shrink: 0;
+                width: 100%;
                 background: var(--card-bg);
                 border: 1px solid var(--glass-border);
                 border-radius: var(--radius-lg);
@@ -322,17 +314,11 @@
                 display: flex;
                 flex-direction: column;
                 box-shadow: var(--shadow-card);
-                transform: scale(0.92);
-                opacity: 0.6;
-                transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            }
-            .sector-card.active-snap {
-                transform: scale(1);
-                opacity: 1;
-                box-shadow: 0 0 25px rgba(0, 242, 254, 0.3);
+                transition: all 0.3s ease;
             }
             .sector-card:active {
                 transform: scale(0.96);
+                border-color: #00f2fe;
             }
             .sector-img-wrap {
                 width: 100%;
@@ -2712,29 +2698,6 @@
                 sessionStorage.setItem("welcomed", true);
             }
             
-            // GSAP-like Scroll Trigger for Cinematic Horizontal Slider
-            const sectorObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('active-snap');
-                    } else {
-                        entry.target.classList.remove('active-snap');
-                    }
-                });
-            }, {
-                root: document.getElementById('sector-grid'),
-                threshold: 0.6 // Trigger when 60% of card is visible
-            });
-
-            // Re-apply observer whenever sectors load
-            const origRenderCategories = renderCategories;
-            renderCategories = function(parentId) {
-                origRenderCategories(parentId);
-                setTimeout(() => {
-                    document.querySelectorAll('.sector-card').forEach(card => sectorObserver.observe(card));
-                }, 100);
-            };
-
-        </script>
+            </script>
     </body>
 </html>
