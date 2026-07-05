@@ -2605,7 +2605,7 @@
             }
             
             // Reduced bubble count to ensure absolutely zero lag on all devices
-            let bubbles = [];
+            bubbles = []; // FIXED: Removed 'let' to prevent SyntaxError script crash
             for (let i = 0; i < 25; i++) bubbles.push(new Bubble());
             
             function animateCanvas() {
