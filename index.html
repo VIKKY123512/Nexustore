@@ -763,6 +763,44 @@
                 }
             }
 
+            /* ===== Contained-scroll "sticky" cards (home sectors + category products only) =====
+               Requirement: header/search bar/section title stay fixed in place; only the
+               card grid beneath them scrolls. Implemented with a fixed-height flex column
+               instead of stacked position:sticky offsets, which is what was causing
+               #cat-page-title and #cat-page-header to collide at the same sticky "top"
+               value and overlap once scrolled. This only targets the two category-browsing
+               pages - Wishlist/Purchases/Search keep their normal full-page scroll. */
+            #home-page.page-view.active,
+            #category-page.page-view.active {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 150px);
+                height: calc(100dvh - 150px);
+            }
+            #category-page.page-view.active {
+                height: calc(100vh - 225px);
+                height: calc(100dvh - 225px);
+            }
+            #home-page.page-view.active > .section-title,
+            #category-page.page-view.active > #cat-page-header,
+            #category-page.page-view.active > #cat-page-title {
+                position: static;
+                flex-shrink: 0;
+            }
+            #home-page.page-view.active > #sector-grid,
+            #category-page.page-view.active > #cat-page-grid {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 100px;
+                scroll-behavior: smooth;
+            }
+            #home-page.page-view.active > #sector-grid::-webkit-scrollbar,
+            #category-page.page-view.active > #cat-page-grid::-webkit-scrollbar {
+                width: 0px;
+            }
+
             /* DESKTOP RESPONSIVENESS */
             @media (min-width: 1024px) {
                 #mobile-viewport {
