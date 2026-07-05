@@ -358,11 +358,9 @@
                 border: 1px solid var(--glass-border);
                 border-radius: var(--radius-md);
                 padding: 15px;
-                box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.5); /* Parallax shadow for stacking */
+                box-shadow: var(--shadow-card);
                 cursor: pointer;
-                position: sticky;
-                top: 155px; /* Sticks perfectly below the search bar */
-                z-index: 10;
+                position: relative;
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
