@@ -227,34 +227,45 @@
                 position: relative;
             }
             .search-wrap {
-                position: relative;
+                position: sticky;
+                top: 75px;
+                z-index: 95;
                 margin-bottom: 25px;
+                padding: 10px;
+                margin-left: -10px;
+                margin-right: -10px;
+                background: rgba(0, 31, 63, 0.4);
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                border-radius: var(--radius-lg);
+                transition: 0.3s ease;
             }
             .search-input {
                 width: 100%;
                 padding: 18px 20px 18px 55px;
                 border-radius: var(--radius-lg);
-                border: 1px solid var(--glass-border);
-                background: var(--card-bg);
-                backdrop-filter: blur(10px);
+                border: 1px solid rgba(0, 242, 254, 0.3);
+                background: rgba(255, 255, 255, 0.05) !important;
+                backdrop-filter: blur(20px);
                 font-family: var(--font-body);
                 font-size: 1rem;
                 color: var(--text-main);
-                box-shadow: var(--shadow-card);
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
                 transition: 0.3s;
             }
             .search-input:focus {
-                border-color: #10b981;
-                box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+                border-color: #00f2fe;
+                box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
                 transform: translateY(-2px);
             }
             .search-wrap i {
                 position: absolute;
-                left: 22px;
+                left: 32px;
                 top: 50%;
                 transform: translateY(-50%);
-                color: #06b6d4;
-                font-size: 1.2rem;
+                color: #00f2fe;
+                font-size: 1.5rem;
+                text-shadow: 0 0 15px rgba(0, 242, 254, 0.9);
                 pointer-events: none;
                 z-index: 10;
             }
@@ -309,13 +320,7 @@
                 position: relative;
             }
             .sector-img-wrap::after {
-                content: "";
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                height: 60%;
-                background: linear-gradient(to top, rgba(2, 4, 8, 0.9), transparent);
+                display: none !important;
             }
             .sector-img-wrap img {
                 width: 100%;
@@ -337,8 +342,9 @@
                 font-weight: 700;
                 font-size: 1.1rem;
                 color: var(--text-main);
-                background: linear-gradient(to right, #fff, #94a3b8);
+                background: linear-gradient(to right, #fff, #cce7ff);
                 -webkit-background-clip: text;
+                text-shadow: 0 2px 5px rgba(0,0,0,0.5);
             }
             .grid {
                 display: grid;
@@ -463,15 +469,16 @@
                 transform: translateX(-50%);
                 width: 90%;
                 max-width: 400px;
-                background: rgba(10, 25, 41, 0.85);
-                backdrop-filter: blur(30px);
-                border: 1px solid rgba(6, 182, 212, 0.3);
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                border: 1px solid rgba(255, 255, 255, 0.15);
                 border-radius: 40px;
                 padding: 12px 30px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+                box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
                 z-index: 1000;
             }
             .nav-btn {
@@ -511,11 +518,13 @@
             .modal-content {
                 width: 90%;
                 max-width: 400px;
-                background: var(--modal-bg);
-                border: 1px solid var(--glass-border);
+                background: rgba(0, 15, 30, 0.5);
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                border: 1px solid rgba(0, 242, 254, 0.3);
                 border-radius: 28px;
                 padding: 30px;
-                box-shadow: 0 0 50px rgba(6, 182, 212, 0.15);
+                box-shadow: 0 0 50px rgba(0, 242, 254, 0.2);
                 max-height: 85vh;
                 overflow-y: auto;
                 position: relative;
@@ -1387,8 +1396,8 @@
                     style="
                         height: 300px;
                         overflow-y: auto;
-                        background: rgba(0, 180, 219, 0.05);
-                        border: 1px solid rgba(0, 242, 254, 0.3);
+                        background: transparent;
+                        border: 1px solid rgba(0, 242, 254, 0.2);
                         border-radius: 15px;
                         padding: 15px;
                         margin-bottom: 15px;
@@ -1787,8 +1796,8 @@
                     const category = app ? (app.category || "") : "";
                     const verified = order.status === "verified";
                     const badge = verified
-                        ? '<span style="color:#10b981; font-weight:700;">✓ Verified</span>'
-                        : '<span style="color:#f59e0b; font-weight:700;">⏳ Pending Verification</span>';
+                        ? '<span style="color:#00f2fe; font-weight:700;"><img src="bluetick.png" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;">Verified</span>'
+                        : '<span style="color:#f59e0b; font-weight:700;">⏳ Pending</span>';
                     let extra;
                     if (verified) {
                         extra = `<button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="downloadPurchase('${productId}')"><i class="fas fa-download"></i> Download</button>`;
@@ -1804,8 +1813,8 @@
                         </div>`;
                     }
                     grid.innerHTML += `                        <div class="card" onclick="openDetail('${productId}')" style="position: relative; cursor: pointer;">
-                            <div style="position: absolute; top: 10px; right: 10px; z-index: 5; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">${
-                                verified ? "✓ OWNED" : "PENDING"
+                            <div style="position: absolute; top: 10px; right: 10px; z-index: 5;">${
+                                verified ? '<img src="bluetick.png" style="width: 24px; height: 24px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));">' : '<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;">PENDING</span>'
                             }</div>
                             <img src="${logo}" style="width: 100%; height: 90px; object-fit: contain; margin-bottom: 15px; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));"/>
                             <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${title}</h3>
@@ -1981,7 +1990,7 @@
                 } else {
                     const isVIP = Object.values(currentUserOrders).some((o) => o.status === "verified");
                     const vipHtml = isVIP
-                        ? `<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align:middle;"><circle cx="12" cy="12" r="12" fill="#06b6d4"/><path d="M9.5 12.5l2 2 4-4.5" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+                        ? `<img src="bluetick.png" style="width: 16px; height: 16px; vertical-align: middle; filter: drop-shadow(0 0 4px rgba(0,242,254,0.5));" alt="Verified">`
                         : '';
                     
                     document.getElementById("hud-name").innerHTML = `<div class="vip-badge-container">${escapeHtml(currentUser.name)} ${vipHtml}</div>`;
@@ -2090,7 +2099,7 @@
                                 else badge = '<div class="app-badge update">UPDATED</div>';
                             }
                             const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
-                                ? `<div style="position:absolute; top:10px; right:45px; z-index:5; background:#00e676; color:#000; padding:4px; border-radius:50%;"><i class="fas fa-check"></i></div>` : '';
+                                ? `<div style="position:absolute; top:10px; right:45px; z-index:5;"><img src="bluetick.png" style="width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));"></div>` : '';
                             const tagsHtml = getTagsHtml(app);
                             grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"> ${badge} ${ownedHtml} <div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><img src="${app.logo}"> ${tagsHtml} <h3 style="margin-top:10px;">${app.title}</h3><p>${app.category}</p></div>`;
                         });
@@ -2509,10 +2518,10 @@
                 return tags;
             }
 
-            // Enhanced VIP System Fix
+            // Enhanced VIP System Fix (Using bluetick.png)
             function getVipBadge(userId) {
                 const isVIP = Object.values(currentUserOrders || {}).some(o => o.status === "verified");
-                if(isVIP) return `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle; filter:drop-shadow(0 0 5px #00f2fe);"><circle cx="12" cy="12" r="12" fill="#00f2fe"/><path d="M9.5 12.5l2 2 4-4.5" stroke="#001f3f" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> <span style="font-size:0.7rem; color:#00f2fe; text-transform:uppercase; font-weight:800; border:1px solid #00f2fe; padding:2px 6px; border-radius:10px; margin-left:5px;">VIP</span>`;
+                if(isVIP) return `<img src="bluetick.png" style="width: 18px; height: 18px; vertical-align: middle; margin-left: 5px; filter: drop-shadow(0 0 3px rgba(0,242,254,0.6));" alt="Verified"> <span style="font-size:0.7rem; color:#00f2fe; text-transform:uppercase; font-weight:800; border:1px solid #00f2fe; padding:2px 6px; border-radius:10px; margin-left:3px;">VIP</span>`;
                 return '';
             }
             const origSyncUI = syncUserUI;
@@ -2525,51 +2534,14 @@
                 }
             };
 
-            // Ocean Physics Engine
-            class Fish {
-                constructor() {
-                    this.reset();
-                }
-                reset() {
-                    this.y = Math.random() * (canvas.height - 100) + 50;
-                    this.direction = Math.random() > 0.5 ? 1 : -1;
-                    this.x = this.direction === 1 ? -50 : canvas.width + 50;
-                    this.speed = Math.random() * 1 + 0.5;
-                    this.size = Math.random() * 15 + 10;
-                    this.type = Math.random() > 0.95 ? 'shark' : (Math.random() > 0.90 ? 'whale' : 'fish');
-                    if(this.type === 'whale') { this.size *= 3; this.speed *= 0.3; }
-                    if(this.type === 'shark') { this.size *= 2; this.speed *= 1.5; }
-                }
-                update() {
-                    this.x += this.speed * this.direction;
-                    this.y += Math.sin(this.x * 0.01) * 0.5;
-                    if((this.direction === 1 && this.x > canvas.width + 100) || (this.direction === -1 && this.x < -100)) this.reset();
-                }
-                draw() {
-                    ctx.save();
-                    ctx.translate(this.x, this.y);
-                    if(this.direction === -1) ctx.scale(-1, 1);
-                    ctx.fillStyle = this.type === 'shark' ? 'rgba(100, 116, 139, 0.4)' : (this.type === 'whale' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(0, 242, 254, 0.5)');
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, this.size, this.size/2, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    // Tail
-                    ctx.beginPath();
-                    ctx.moveTo(-this.size, 0);
-                    ctx.lineTo(-this.size - this.size/2, -this.size/2);
-                    ctx.lineTo(-this.size - this.size/2, this.size/2);
-                    ctx.fill();
-                    ctx.restore();
-                }
-            }
-
+            // Ocean Physics Engine (Zero-Lag Bubbles Only)
             class Bubble {
                 constructor() {
                     this.reset();
                     this.y = Math.random() * canvas.height;
                 }
                 reset() {
-                    this.radius = Math.random() * 20 + 8;
+                    this.radius = Math.random() * 15 + 5;
                     this.x = Math.random() * canvas.width;
                     this.y = canvas.height + this.radius * 2;
                     this.speed = Math.random() * 1.5 + 0.5;
@@ -2577,11 +2549,6 @@
                     this.wobbleSpeed = Math.random() * 0.04 + 0.01;
                     this.popped = false;
                     this.popParticles = [];
-                    const palette = ["16,185,129", "34,211,238", "168,85,247", "244,114,182", "250,204,21"];
-                    const colorVal = palette[Math.floor(Math.random() * palette.length)];
-                    this.rgb = colorVal;
-                    this.color = `rgba(${colorVal}, ${Math.random() * 0.3 + 0.1})`;
-                    this.stroke = `rgba(${colorVal}, 0.5)`;
                 }
                 update() {
                     if (this.popped) {
@@ -2589,8 +2556,8 @@
                             let p = this.popParticles[i];
                             p.x += p.vx;
                             p.y += p.vy;
-                            p.vy += 0.1; // gravity
-                            p.life -= 0.03;
+                            p.vy += 0.15; // gravity
+                            p.life -= 0.05;
                             if (p.life <= 0) this.popParticles.splice(i, 1);
                         }
                         if (this.popParticles.length === 0) this.reset();
@@ -2598,7 +2565,7 @@
                     }
                     this.y -= this.speed;
                     this.wobble += this.wobbleSpeed;
-                    this.x += Math.sin(this.wobble) * 0.8;
+                    this.x += Math.sin(this.wobble) * 1.0;
                     if (this.y < -this.radius) this.reset();
                 }
                 draw() {
@@ -2606,66 +2573,59 @@
                         this.popParticles.forEach(p => {
                             ctx.beginPath();
                             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                            ctx.fillStyle = `rgba(${this.rgb}, ${p.life})`;
+                            ctx.fillStyle = `rgba(0, 242, 254, ${p.life})`;
                             ctx.fill();
                         });
                         return;
                     }
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = this.color;
+                    ctx.fillStyle = `rgba(0, 242, 254, 0.15)`;
                     ctx.fill();
-                    ctx.strokeStyle = this.stroke;
-                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = `rgba(0, 242, 254, 0.4)`;
+                    ctx.lineWidth = 1;
                     ctx.stroke();
                     
-                    // Highlight for liquid bubble effect
+                    // Simple Highlight for Glass effect
                     ctx.beginPath();
                     ctx.arc(this.x - this.radius*0.3, this.y - this.radius*0.3, this.radius*0.2, 0, Math.PI * 2);
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
                     ctx.fill();
                 }
                 pop() {
                     this.popped = true;
-                    for (let i=0; i<12; i++) {
+                    for (let i=0; i<8; i++) {
                         this.popParticles.push({
                             x: this.x, y: this.y,
-                            vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8,
-                            r: Math.random()*4+1.5, life: 1
+                            vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
+                            r: Math.random()*3+1, life: 1
                         });
                     }
                 }
             }
-            let fishes = [];
-            for (let i = 0; i < 35; i++) bubbles.push(new Bubble());
-            for (let i = 0; i < 5; i++) fishes.push(new Fish());
+            
+            // Reduced bubble count to ensure absolutely zero lag on all devices
+            let bubbles = [];
+            for (let i = 0; i < 25; i++) bubbles.push(new Bubble());
             
             function animateCanvas() {
                 requestAnimationFrame(animateCanvas);
-                if (isPaused) return;
+                // We keep animations running even when modals are open so support chat sees bubbles
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                fishes.forEach(f => { f.update(); f.draw(); });
                 bubbles.forEach(b => { b.update(); b.draw(); });
             }
             animateCanvas();
             
+            // Fast click detection for popping (works globally, even through transparent modals)
             document.addEventListener("click", (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const mx = e.clientX - rect.left;
-                const my = e.clientY - rect.top;
-                let clicked = false;
+                const mx = e.clientX;
+                const my = e.clientY;
                 bubbles.forEach(b => {
                     if (!b.popped) {
                         const dist = Math.hypot(b.x - mx, b.y - my);
-                        if (dist < b.radius + 20) { b.pop(); playOceanSound('pop'); clicked = true; }
+                        if (dist < b.radius + 25) { b.pop(); playOceanSound('pop'); }
                     }
                 });
-                if(!clicked) {
-                    fishes.forEach(f => {
-                        const dist = Math.hypot(f.x - mx, f.y - my);
-                        if (dist < f.size + 20) { f.speed *= 3; playOceanSound('splash'); } // Scared fish
-                    });
-                }
             });
             db.ref("site_settings/popup").once("value", (s) => {
                 const p = s.val() || { title: "Welcome to Nexus", msg: "Enjoy premium apps & tools.", active: true };
