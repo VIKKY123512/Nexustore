@@ -4,21 +4,16 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <title>NexusStore - Premium Digital Products & Modded Apps</title>
-        <meta name="description" content="NexusStore - Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly with verified secure payments." />
+        <meta name="description" content="NexusStore - Premium Digital Products & Tools. Instantly download the best apps, verified and secure." />
         <meta property="og:title" content="NexusStore - Premium Digital Products & Modded Apps" />
         <meta property="og:description" content="Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://www.nexustore.in" />
-        <link
-            rel="icon"
-            href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2306b6d4'/%3E%3Cstop offset='1' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='10' y='10' width='80' height='80' rx='20' fill='url(%23g)'/%3E%3C/svg%3E"
-        />
+        <meta property="og:image" content="https://via.placeholder.com/1200x630.png?text=NexusStore+Ocean" />
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2300f2fe'/%3E%3Cstop offset='1' stop-color='%234facfe'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='10' y='10' width='80' height='80' rx='20' fill='url(%23g)'/%3E%3C/svg%3E" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap"
-            rel="stylesheet"
-        />
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <style>
             * {
@@ -28,25 +23,65 @@
                 -webkit-tap-highlight-color: transparent;
             }
             :root {
-                --bg-color: #020408;
-                --bg-gradient: radial-gradient(circle at 50% 0%, #0f1c2e 0%, #020408 100%);
-                --glass-header: rgba(10, 25, 41, 0.65);
-                --glass-border: rgba(6, 182, 212, 0.2);
-                --text-main: #e2e8f0;
-                --text-sub: #94a3b8;
-                --card-bg: rgba(17, 24, 39, 0.75);
-                --modal-bg: #0b111a;
-                --accent-gradient: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+                --bg-color: #001f3f;
+                --bg-gradient: linear-gradient(180deg, #00b4db 0%, #0083b0 50%, #001f3f 100%);
+                --glass-header: rgba(255, 255, 255, 0.1);
+                --glass-border: rgba(255, 255, 255, 0.25);
+                --text-main: #ffffff;
+                --text-sub: #cce7ff;
+                --card-bg: rgba(255, 255, 255, 0.08);
+                --modal-bg: rgba(0, 31, 63, 0.75);
+                --accent-gradient: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
                 --premium-gradient: linear-gradient(45deg, #a855f7, #ec4899, #f59e0b);
-                --success: #10b981;
-                --danger: #ef4444;
-                --update-badge: #0ea5e9;
+                --success: #00e676;
+                --danger: #ff1744;
+                --update-badge: #00d2ff;
                 --radius-lg: 24px;
                 --radius-md: 18px;
-                --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.5);
-                --glow-accent: 0 0 20px rgba(16, 185, 129, 0.25);
+                --shadow-card: 0 8px 32px 0 rgba(0, 40, 80, 0.37);
+                --glow-accent: 0 0 25px rgba(0, 242, 254, 0.4);
                 --font-body: "Outfit", sans-serif;
             }
+            .card, .sector-card, .search-input, .desc-box {
+                background: var(--card-bg) !important;
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                border: 1px solid var(--glass-border);
+            }
+            .card:hover, .sector-card:hover {
+                border-color: #00f2fe;
+                box-shadow: 0 0 25px rgba(0, 242, 254, 0.3);
+            }
+            .sector-img-wrap::after {
+                background: linear-gradient(to top, rgba(0, 31, 63, 0.7), transparent) !important;
+            }
+            /* Hamburger & Side Menu CSS */
+            .side-menu-overlay {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px);
+                z-index: 9999; display: none; opacity: 0; transition: 0.3s;
+            }
+            .side-menu {
+                position: fixed; top: 0; right: -300px; width: 280px; height: 100%;
+                background: rgba(0, 31, 63, 0.9); backdrop-filter: blur(20px);
+                border-left: 1px solid var(--glass-border); z-index: 10000;
+                transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; padding: 20px;
+            }
+            .side-menu.open { right: 0; }
+            .side-menu-overlay.open { display: block; opacity: 1; }
+            .menu-link {
+                padding: 15px; font-size: 1.1rem; color: var(--text-main); font-weight: 600;
+                border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; gap: 15px; cursor: pointer;
+            }
+            .menu-link i { color: #00f2fe; width: 20px; text-align: center; }
+            .menu-link:active { background: rgba(0, 242, 254, 0.1); }
+            .prod-tags { display: flex; gap: 5px; position: absolute; bottom: 10px; left: 10px; z-index: 5;}
+            .ptag { font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; }
+            .ptag-free { background: #00e676; color: #000; box-shadow: 0 0 10px rgba(0, 230, 118, 0.4); }
+            .ptag-paid { background: #f59e0b; color: #fff; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+            .ptag-premium { background: var(--premium-gradient); color: #fff; box-shadow: 0 0 15px rgba(168, 85, 247, 0.6); }
+            .chat-ai-chips { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+            .chat-chip { background: rgba(0, 242, 254, 0.1); border: 1px solid #00f2fe; color: #00f2fe; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
             body {
                 margin: 0;
                 background: var(--bg-color);
@@ -1079,11 +1114,27 @@
                         <i class="far fa-bell"></i>
                         <div class="notif-dot" id="notif-dot"></div>
                     </div>
-                    <div class="user-pill" onclick="toggleModal('modal-profile', true)">
-                        <img id="hud-avatar" src="" /><span id="hud-name">Guest</span>
+                    <div class="icon-btn" onclick="toggleSideMenu()">
+                        <i class="fas fa-bars"></i>
                     </div>
                 </div>
             </header>
+            
+            <div class="side-menu-overlay" id="side-menu-overlay" onclick="toggleSideMenu()"></div>
+            <div class="side-menu" id="side-menu">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <div class="user-pill" onclick="toggleSideMenu(); toggleModal('modal-profile', true)" style="flex: 1; justify-content: center; background: transparent; border-color: #00f2fe;">
+                        <img id="hud-avatar" src="" /><span id="hud-name">Guest</span>
+                    </div>
+                    <i class="fas fa-times" style="font-size: 1.5rem; color: var(--text-main); cursor: pointer; padding-left: 15px;" onclick="toggleSideMenu()"></i>
+                </div>
+                <div class="menu-link" onclick="toggleSideMenu(); toggleModal('modal-profile', true)"><i class="fas fa-user"></i> Profile</div>
+                <div class="menu-link" onclick="toggleSideMenu(); navTo('purchases')"><i class="fas fa-shopping-bag"></i> My Purchases</div>
+                <div class="menu-link" onclick="toggleSideMenu(); navTo('wishlist')"><i class="fas fa-heart"></i> Wishlist</div>
+                <div class="menu-link" onclick="toggleSideMenu(); openSupport()"><i class="fas fa-headset"></i> Support</div>
+                <div class="menu-link" onclick="toggleSideMenu(); openCommunityModal()"><i class="fas fa-users"></i> Join Community</div>
+                <div class="menu-link" onclick="toggleSideMenu(); toggleModal('modal-profile', true)"><i class="fas fa-cog"></i> Settings</div>
+            </div>
             <div id="notif-box">
                 <h4>Alerts</h4>
                 <div id="notif-list">
@@ -1334,10 +1385,10 @@
                 <div
                     id="support-history"
                     style="
-                        height: 350px;
+                        height: 300px;
                         overflow-y: auto;
-                        background: var(--bg-color);
-                        border: 1px solid var(--glass-border);
+                        background: rgba(0, 180, 219, 0.05);
+                        border: 1px solid rgba(0, 242, 254, 0.3);
                         border-radius: 15px;
                         padding: 15px;
                         margin-bottom: 15px;
@@ -1346,15 +1397,21 @@
                         gap: 10px;
                     "
                 >
-                    <div style="text-align: center; color: var(--text-sub); margin-top: 20px">No messages.</div>
+                    <div style="text-align: center; color: var(--text-sub); margin-top: 20px">Ocean Support is online.</div>
                 </div>
-                <input type="text" id="sup-title" class="inp" placeholder="Topic" />
+                <div class="chat-ai-chips">
+                    <div class="chat-chip" onclick="document.getElementById('sup-msg').value='Payment issue: '">💳 Payment Issue</div>
+                    <div class="chat-chip" onclick="document.getElementById('sup-msg').value='Download error: '">⬇️ Download Error</div>
+                    <div class="chat-chip" onclick="document.getElementById('sup-msg').value='Login problem: '">🔐 Login Problem</div>
+                </div>
+                <input type="text" id="sup-title" class="inp" placeholder="Topic (Optional)" style="display:none;" />
                 <div style="display: flex; gap: 10px">
-                    <input type="text" id="sup-msg" class="inp" placeholder="Message..." style="margin: 0" /><button
-                        class="btn-main"
-                        onclick="sendSupport()"
-                        style="width: 60px; margin: 0"
-                    >
+                    <div class="icon-btn" style="border-radius: 16px; border-color: var(--glass-border); flex-shrink: 0;" onclick="document.getElementById('sup-file').click()">
+                        <i class="fas fa-paperclip"></i>
+                    </div>
+                    <input type="file" id="sup-file" accept="image/png, image/jpeg" style="display: none;" onchange="showToast('File selected for upload', 'info')" />
+                    <input type="text" id="sup-msg" class="inp" placeholder="Type your message..." style="margin: 0" />
+                    <button class="btn-main" onclick="sendSupport()" style="width: 60px; margin: 0; flex-shrink: 0;">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
@@ -2032,7 +2089,10 @@
                                 if (updateTime - createdTime < 10000) badge = '<div class="app-badge">NEW</div>';
                                 else badge = '<div class="app-badge update">UPDATED</div>';
                             }
-                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"> ${badge} <div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><img src="${app.logo}"><h3>${app.title}</h3><p>${app.category}</p></div>`;
+                            const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
+                                ? `<div style="position:absolute; top:10px; right:45px; z-index:5; background:#00e676; color:#000; padding:4px; border-radius:50%;"><i class="fas fa-check"></i></div>` : '';
+                            const tagsHtml = getTagsHtml(app);
+                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"> ${badge} ${ownedHtml} <div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><img src="${app.logo}"> ${tagsHtml} <h3 style="margin-top:10px;">${app.title}</h3><p>${app.category}</p></div>`;
                         });
                         if (apps.length === 0)
                             grid.innerHTML =
@@ -2393,6 +2453,116 @@
             window.addEventListener("resize", resize);
             resize();
             
+            // Web Audio API for Ocean UI Sounds
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            function playOceanSound(type) {
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                if(type === 'pop') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1500, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+                } else if(type === 'splash') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+                }
+            }
+
+            function toggleSideMenu() {
+                document.getElementById('side-menu').classList.toggle('open');
+                document.getElementById('side-menu-overlay').classList.toggle('open');
+            }
+            
+            function openCommunityModal() {
+                db.ref("site_settings/socials").once("value", s => {
+                    const soc = s.val() || {};
+                    let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
+                    if(soc.telegram) html += `<button class="btn-sec" onclick="window.open('${soc.telegram}')" style="background:#0088cc; color:white; border:none;"><i class="fab fa-telegram"></i> Telegram</button>`;
+                    if(soc.whatsapp) html += `<button class="btn-sec" onclick="window.open('${soc.whatsapp}')" style="background:#25D366; color:white; border:none;"><i class="fab fa-whatsapp"></i> WhatsApp</button>`;
+                    if(soc.instagram) html += `<button class="btn-sec" onclick="window.open('${soc.instagram}')" style="background:linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color:white; border:none;"><i class="fab fa-instagram"></i> Instagram</button>`;
+                    if(soc.youtube) html += `<button class="btn-sec" onclick="window.open('${soc.youtube}')" style="background:#FF0000; color:white; border:none;"><i class="fab fa-youtube"></i> YouTube</button>`;
+                    html += `</div>`;
+                    document.getElementById('info-title').innerText = "Join Community";
+                    document.getElementById('info-body').innerHTML = html;
+                    toggleModal('modal-info', true);
+                });
+            }
+            
+            function getTagsHtml(app) {
+                let tags = `<div class="prod-tags">`;
+                if(app.price && app.price > 500) tags += `<span class="ptag ptag-premium">PREMIUM</span>`;
+                else if(app.price && app.price > 0) tags += `<span class="ptag ptag-paid">PAID</span>`;
+                else tags += `<span class="ptag ptag-free">FREE</span>`;
+                if((app.downloads || 0) > 100) tags += `<span class="ptag" style="background:#0ea5e9; color:white;">🔥 HOT</span>`;
+                tags += `</div>`;
+                return tags;
+            }
+
+            // Enhanced VIP System Fix
+            function getVipBadge(userId) {
+                const isVIP = Object.values(currentUserOrders || {}).some(o => o.status === "verified");
+                if(isVIP) return `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle; filter:drop-shadow(0 0 5px #00f2fe);"><circle cx="12" cy="12" r="12" fill="#00f2fe"/><path d="M9.5 12.5l2 2 4-4.5" stroke="#001f3f" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> <span style="font-size:0.7rem; color:#00f2fe; text-transform:uppercase; font-weight:800; border:1px solid #00f2fe; padding:2px 6px; border-radius:10px; margin-left:5px;">VIP</span>`;
+                return '';
+            }
+            const origSyncUI = syncUserUI;
+            syncUserUI = function() {
+                origSyncUI();
+                if(currentUser) {
+                    const badge = getVipBadge(currentUser.id);
+                    document.getElementById("hud-name").innerHTML = escapeHtml(currentUser.name); // Keep pill clean
+                    document.getElementById("edit-name-display").innerHTML = escapeHtml(currentUser.name) + " " + badge;
+                }
+            };
+
+            // Ocean Physics Engine
+            class Fish {
+                constructor() {
+                    this.reset();
+                }
+                reset() {
+                    this.y = Math.random() * (canvas.height - 100) + 50;
+                    this.direction = Math.random() > 0.5 ? 1 : -1;
+                    this.x = this.direction === 1 ? -50 : canvas.width + 50;
+                    this.speed = Math.random() * 1 + 0.5;
+                    this.size = Math.random() * 15 + 10;
+                    this.type = Math.random() > 0.95 ? 'shark' : (Math.random() > 0.90 ? 'whale' : 'fish');
+                    if(this.type === 'whale') { this.size *= 3; this.speed *= 0.3; }
+                    if(this.type === 'shark') { this.size *= 2; this.speed *= 1.5; }
+                }
+                update() {
+                    this.x += this.speed * this.direction;
+                    this.y += Math.sin(this.x * 0.01) * 0.5;
+                    if((this.direction === 1 && this.x > canvas.width + 100) || (this.direction === -1 && this.x < -100)) this.reset();
+                }
+                draw() {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    if(this.direction === -1) ctx.scale(-1, 1);
+                    ctx.fillStyle = this.type === 'shark' ? 'rgba(100, 116, 139, 0.4)' : (this.type === 'whale' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(0, 242, 254, 0.5)');
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size, this.size/2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Tail
+                    ctx.beginPath();
+                    ctx.moveTo(-this.size, 0);
+                    ctx.lineTo(-this.size - this.size/2, -this.size/2);
+                    ctx.lineTo(-this.size - this.size/2, this.size/2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
             class Bubble {
                 constructor() {
                     this.reset();
@@ -2466,12 +2636,15 @@
                     }
                 }
             }
+            let fishes = [];
             for (let i = 0; i < 35; i++) bubbles.push(new Bubble());
+            for (let i = 0; i < 5; i++) fishes.push(new Fish());
             
             function animateCanvas() {
                 requestAnimationFrame(animateCanvas);
                 if (isPaused) return;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                fishes.forEach(f => { f.update(); f.draw(); });
                 bubbles.forEach(b => { b.update(); b.draw(); });
             }
             animateCanvas();
@@ -2480,12 +2653,19 @@
                 const rect = canvas.getBoundingClientRect();
                 const mx = e.clientX - rect.left;
                 const my = e.clientY - rect.top;
+                let clicked = false;
                 bubbles.forEach(b => {
                     if (!b.popped) {
                         const dist = Math.hypot(b.x - mx, b.y - my);
-                        if (dist < b.radius + 20) b.pop(); // Explode on tap!
+                        if (dist < b.radius + 20) { b.pop(); playOceanSound('pop'); clicked = true; }
                     }
                 });
+                if(!clicked) {
+                    fishes.forEach(f => {
+                        const dist = Math.hypot(f.x - mx, f.y - my);
+                        if (dist < f.size + 20) { f.speed *= 3; playOceanSound('splash'); } // Scared fish
+                    });
+                }
             });
             db.ref("site_settings/popup").once("value", (s) => {
                 const p = s.val() || { title: "Welcome to Nexus", msg: "Enjoy premium apps & tools.", active: true };
