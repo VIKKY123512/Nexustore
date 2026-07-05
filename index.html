@@ -3,7 +3,16 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <title>NEXUS | STORE</title>
+        <title>NexusStore - Premium Digital Products & Modded Apps</title>
+        <meta name="description" content="NexusStore - Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly with verified secure payments." />
+        <meta property="og:title" content="NexusStore - Premium Digital Products & Modded Apps" />
+        <meta property="og:description" content="Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://www.nexustore.in" />
+        <link
+            rel="icon"
+            href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2306b6d4'/%3E%3Cstop offset='1' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='10' y='10' width='80' height='80' rx='20' fill='url(%23g)'/%3E%3C/svg%3E"
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -1584,7 +1593,7 @@
 
                             if (returnedFromPayment && !paymentReturnHandled) {
                                 paymentReturnHandled = true;
-                                showToast("Confirming your payment — check My Purchases for status", "info");
+                                showToast("Enter your 12-digit UTR in My Purchases to confirm payment", "info");
                                 setTimeout(() => navTo("purchases"), 600);
                             }
 
@@ -1615,9 +1624,26 @@
             function googleSignIn() {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 auth.signInWithPopup(provider).catch((err) => {
-                    if (err.code !== "auth/popup-closed-by-user") showToast("Google Sign-In Failed", "error");
+                    if (err.code === "auth/popup-closed-by-user") return;
+                    if (
+                        err.code === "auth/popup-blocked" ||
+                        err.code === "auth/operation-not-supported-in-this-environment" ||
+                        err.code === "auth/cancelled-popup-request"
+                    ) {
+                        // Mobile browsers and in-app webviews often block popups - fall back
+                        // to a full-page redirect instead of failing silently.
+                        auth.signInWithRedirect(provider);
+                        return;
+                    }
+                    showToast("Google Sign-In Failed", "error");
                 });
             }
+            // Catches the case where signInWithRedirect sent the user away and back.
+            // onAuthStateChanged handles the success path either way; this only
+            // needs to surface an error if the redirect itself failed.
+            auth.getRedirectResult().catch((err) => {
+                if (err && err.code) showToast("Google Sign-In Failed", "error");
+            });
             function userLogin() {
                 const e = document.getElementById("login-email").value;
                 const p = document.getElementById("login-pass").value;
@@ -1673,13 +1699,15 @@
             function submitPaymentRef(orderId) {
                 const input = document.getElementById("ref-input-" + orderId);
                 const val = input ? input.value.trim() : "";
-                if (!val) return;
+                if (!/^\d{12}$/.test(val)) {
+                    showToast("Enter the 12-digit UTR number from your payment", "error");
+                    return;
+                }
                 db.ref("orders/" + orderId + "/paymentRef").set(val);
-                showToast("Reference submitted", "success");
+                showToast("UTR submitted for verification", "success");
             }
             function renderPurchases() {
-                const grid = document.getElementById("purchases-grid");
-                if (!grid) return;
+                const grid = document.getElementById("purchases-grid");                if (!grid) return;
                 grid.innerHTML = "";
                 const entries = currentUser ? Object.entries(currentUserOrders) : [];
                 const countEl = document.getElementById("purchase-count");
@@ -1708,15 +1736,17 @@
                     if (verified) {
                         extra = `<button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="downloadPurchase('${productId}')"><i class="fas fa-download"></i> Download</button>`;
                     } else if (order.paymentRef) {
-                        extra = `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 10px;">Reference submitted: ${order.paymentRef}</div>`;
+                        extra = `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 10px;">UTR submitted: ${order.paymentRef} · awaiting admin check</div>`;
                     } else {
-                        extra = `<div style="display: flex; gap: 6px; margin-top: 10px;" onclick="event.stopPropagation()">
-                            <input type="text" id="ref-input-${order.orderId}" class="inp" placeholder="Payment ref / UTR (optional)" style="margin-bottom: 0; font-size: 0.8rem;" />
-                            <button class="btn-sec" style="width: auto; padding: 0 14px; margin-bottom: 0;" onclick="submitPaymentRef('${order.orderId}')">Submit</button>
+                        extra = `<div style="margin-top: 10px;" onclick="event.stopPropagation()">
+                            <label style="font-size: 0.7rem; color: #f59e0b; font-weight: 700; display: block; margin-bottom: 4px;">Enter your 12-digit UTR number to speed up verification</label>
+                            <div style="display: flex; gap: 6px;">
+                                <input type="text" inputmode="numeric" maxlength="12" id="ref-input-${order.orderId}" class="inp" placeholder="e.g. 123456789012" style="margin-bottom: 0; font-size: 0.8rem;" />
+                                <button class="btn-sec" style="width: auto; padding: 0 14px; margin-bottom: 0;" onclick="submitPaymentRef('${order.orderId}')">Submit</button>
+                            </div>
                         </div>`;
                     }
-                    grid.innerHTML += `
-                        <div class="card" onclick="openDetail('${productId}')" style="position: relative; cursor: pointer;">
+                    grid.innerHTML += `                        <div class="card" onclick="openDetail('${productId}')" style="position: relative; cursor: pointer;">
                             <div style="position: absolute; top: 10px; right: 10px; z-index: 5; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">${
                                 verified ? "✓ OWNED" : "PENDING"
                             }</div>
@@ -1893,7 +1923,9 @@
                     };
                 } else {
                     const isVIP = Object.values(currentUserOrders).some((o) => o.status === "verified");
-                    const vipHtml = isVIP ? `<img src="bluetick.png" class="vip-badge-icon">` : '';
+                    const vipHtml = isVIP
+                        ? `<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align:middle;"><circle cx="12" cy="12" r="12" fill="#06b6d4"/><path d="M9.5 12.5l2 2 4-4.5" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+                        : '';
                     
                     document.getElementById("hud-name").innerHTML = `<div class="vip-badge-container">${escapeHtml(currentUser.name)} ${vipHtml}</div>`;
                     document.getElementById("hud-avatar").src = currentUser.avatar;
