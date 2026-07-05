@@ -297,38 +297,45 @@
                 width: 100%;
                 background: var(--card-bg);
                 border: 1px solid var(--glass-border);
-                border-radius: var(--radius-md);
+                border-radius: var(--radius-lg);
                 overflow: hidden;
-                position: relative;
+                position: sticky;
+                top: 155px; /* Sticks perfectly below the search bar */
+                height: 55vh; /* Turns the sector into a tall slide */
+                min-height: 300px;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.6); /* Deep shadow for overlapping depth */
                 transform: translateZ(0);
-                box-shadow: var(--shadow-card);
-                transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                transition: 0.3s ease;
                 animation: smoothSlideIn 0.6s ease;
+                z-index: 10;
             }
             .sector-card:active {
                 transform: scale(0.98);
-                opacity: 0.9;
-            }
-            .sector-card:hover {
-                animation: liquidFloat 2s ease infinite;
             }
             .sector-img-wrap {
+                flex: 1;
                 width: 100%;
-                height: auto;
                 display: block;
                 background: #000;
                 position: relative;
+                overflow: hidden;
             }
             .sector-img-wrap::after {
                 display: none !important;
             }
             .sector-img-wrap img {
                 width: 100%;
-                height: auto;
+                height: 100%;
                 object-fit: cover;
                 display: block;
                 opacity: 1;
                 mix-blend-mode: normal;
+                transition: transform 0.5s ease;
+            }
+            .sector-card:hover .sector-img-wrap img {
+                transform: scale(1.05);
             }
             .sector-info {
                 padding: 18px 20px;
@@ -1988,17 +1995,15 @@
                         openAuth();
                     };
                 } else {
-                    const isVIP = Object.values(currentUserOrders).some((o) => o.status === "verified");
-                    const vipHtml = isVIP
-                        ? `<img src="bluetick.png" style="width: 16px; height: 16px; vertical-align: middle; filter: drop-shadow(0 0 4px rgba(0,242,254,0.5));" alt="Verified">`
-                        : '';
+                    // Added bluetick unconditionally to the profile name side as requested
+                    const bluetickHtml = `<img src="bluetick.png" style="width: 18px; height: 18px; vertical-align: middle; margin-left: 4px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));" alt="Verified">`;
                     
-                    document.getElementById("hud-name").innerHTML = `<div class="vip-badge-container">${escapeHtml(currentUser.name)} ${vipHtml}</div>`;
+                    document.getElementById("hud-name").innerHTML = `<div class="vip-badge-container">${escapeHtml(currentUser.name)} ${bluetickHtml}</div>`;
                     document.getElementById("hud-avatar").src = currentUser.avatar;
                     document.getElementById("edit-name").value = currentUser.name;
                     document.getElementById("edit-avatar-img").src = currentUser.avatar;
                     document.getElementById("edit-email-display").innerText = currentUser.email;
-                    document.getElementById("edit-name-display").innerHTML = `<div class="vip-badge-container">${escapeHtml(currentUser.name)} ${vipHtml}</div>`;
+                    document.getElementById("edit-name-display").innerHTML = `<div class="vip-badge-container" style="display: flex; align-items: center; justify-content: center;">${escapeHtml(currentUser.name)} ${bluetickHtml}</div>`;
                     document.getElementById("edit-gender").value = currentUser.gender || "Not Specified";
                     if (!currentUser.wishlist) currentUser.wishlist = [];
                     btn.innerText = "Logout";
