@@ -299,15 +299,13 @@
                 border: 1px solid var(--glass-border);
                 border-radius: var(--radius-lg);
                 overflow: hidden;
-                position: sticky;
-                top: 155px; /* Sticks perfectly below the search bar */
+                position: relative;
                 display: flex;
                 flex-direction: column;
-                box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.6); /* Deep shadow for overlapping depth */
+                box-shadow: var(--shadow-card);
                 transform: translateZ(0);
                 transition: 0.3s ease;
                 animation: smoothSlideIn 0.6s ease;
-                z-index: 10;
             }
             .sector-card:active {
                 transform: scale(0.98);
@@ -360,9 +358,11 @@
                 border: 1px solid var(--glass-border);
                 border-radius: var(--radius-md);
                 padding: 15px;
-                box-shadow: var(--shadow-card);
+                box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.5); /* Parallax shadow for stacking */
                 cursor: pointer;
-                position: relative;
+                position: sticky;
+                top: 155px; /* Sticks perfectly below the search bar */
+                z-index: 10;
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
