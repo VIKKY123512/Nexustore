@@ -136,7 +136,6 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                transform: translateZ(0);
             }
             .logo {
                 font-weight: 800;
@@ -1026,6 +1025,19 @@
                 vertical-align: middle;
                 filter: drop-shadow(0 2px 5px rgba(6, 182, 212, 0.4));
             }
+            /* --- LINUX-LEVEL HARDWARE ACCELERATION & PERFORMANCE --- */
+            * {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+            }
+            /* STRICT STICKY LOCKS - WILL NEVER MOVE OR GLITCH */
+            header, .search-wrap, .section-title, .clickable-header {
+                -webkit-transform: none !important;
+                transform: none !important;
+                will-change: auto !important;
+            }
+            
             .loader-container {
                 display: flex;
                 justify-content: center;
@@ -1033,48 +1045,142 @@
                 width: 100%;
                 padding: 40px 0;
             }
-            .nexus-loader {
-                width: 40px;
-                height: 40px;
+            
+            /* --- 3D ANIMATED BOX LOADER --- */
+            .cube-loader {
+                --duration: 3s;
+                --primary: #00f2fe;
+                --primary-light: #4facfe;
+                width: 160px;
+                height: 250px;
                 position: relative;
                 transform-style: preserve-3d;
-                animation: nexus-spin 2.5s infinite linear;
+                zoom: 0.45;
+                margin: 0 auto;
             }
-            .nexus-side {
+            .cube-loader:before, .cube-loader:after {
+                --r: 20.5deg;
+                content: "";
+                width: 250px;
+                height: 110px;
                 position: absolute;
-                width: 40px;
-                height: 40px;
-                border: 2px solid #06b6d4;
-                border-radius: 6px;
-                box-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
-                background: rgba(6, 182, 212, 0.1);
+                right: 32%;
+                bottom: -10px;
+                background: transparent;
+                transform: translateZ(160px) rotate(var(--r));
+                animation: mask var(--duration) linear forwards infinite;
             }
-            .nexus-side.front {
-                transform: translateZ(20px);
+            .cube-loader:after {
+                --r: -20.5deg;
+                right: auto;
+                left: 32%;
             }
-            .nexus-side.back {
-                transform: rotateY(180deg) translateZ(20px);
+            .cube-loader .box {
+                width: 26px;
+                height: 26px;
+                position: absolute;
+                bottom: 0;
+                left: 70px;
+                transform-style: preserve-3d;
+                transform: translateZ(80px);
             }
-            .nexus-side.right {
-                transform: rotateY(90deg) translateZ(20px);
+            .cube-loader .box > div {
+                --bg: var(--primary);
+                width: 100%;
+                height: 100%;
+                background: var(--bg);
+                position: absolute;
             }
-            .nexus-side.left {
-                transform: rotateY(-90deg) translateZ(20px);
+            .cube-loader .box > div:before, .cube-loader .box > div:after {
+                content: "";
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background: var(--bg);
             }
-            .nexus-side.top {
-                transform: rotateX(90deg) translateZ(20px);
+            .cube-loader .box > div:before {
+                background: var(--primary-light);
+                transform: rotateY(90deg) translateX(-13px) translateZ(-13px);
             }
-            .nexus-side.bottom {
-                transform: rotateX(-90deg) translateZ(20px);
+            .cube-loader .box > div:after {
+                background: rgba(0, 242, 254, 0.5);
+                transform: rotateX(90deg) translateY(13px) translateZ(-13px);
             }
-            @keyframes nexus-spin {
-                0% {
-                    transform: rotateX(0deg) rotateY(0deg);
-                }
-                100% {
-                    transform: rotateX(360deg) rotateY(360deg);
-                }
+            .cube-loader .box0 { animation: box-scale0 var(--duration) linear forwards infinite; }
+            .cube-loader .box1 { animation: box-scale1 var(--duration) linear forwards infinite; }
+            .cube-loader .box2 { animation: box-scale2 var(--duration) linear forwards infinite; }
+            .cube-loader .box3 { animation: box-scale3 var(--duration) linear forwards infinite; }
+            .cube-loader .box4 { animation: box-scale4 var(--duration) linear forwards infinite; }
+            .cube-loader .box5 { animation: box-scale5 var(--duration) linear forwards infinite; }
+            .cube-loader .box6 { animation: box-scale6 var(--duration) linear forwards infinite; }
+            .cube-loader .box7 { animation: box-scale7 var(--duration) linear forwards infinite; }
+            .cube-loader .ground {
+                width: 150%;
+                height: 150%;
+                position: absolute;
+                bottom: -35px;
+                left: -25%;
+                background: radial-gradient(circle, rgba(0, 242, 254, 0.4) 0%, transparent 60%);
+                transform: rotateX(90deg);
             }
+            @keyframes box-scale0 { 0%, 15%, 100% { transform: translateZ(80px) scale(0); } 20%, 90% { transform: translateZ(80px) scale(1); } }
+            @keyframes box-scale1 { 0%, 20%, 100% { transform: translate(-26px, -26px) translateZ(80px) scale(0); } 25%, 90% { transform: translate(-26px, -26px) translateZ(80px) scale(1); } }
+            @keyframes box-scale2 { 0%, 25%, 100% { transform: translate(-52px, -52px) translateZ(80px) scale(0); } 30%, 90% { transform: translate(-52px, -52px) translateZ(80px) scale(1); } }
+            @keyframes box-scale3 { 0%, 30%, 100% { transform: translate(26px, -26px) translateZ(80px) scale(0); } 35%, 90% { transform: translate(26px, -26px) translateZ(80px) scale(1); } }
+            @keyframes box-scale4 { 0%, 35%, 100% { transform: translate(52px, -52px) translateZ(80px) scale(0); } 40%, 90% { transform: translate(52px, -52px) translateZ(80px) scale(1); } }
+            @keyframes box-scale5 { 0%, 40%, 100% { transform: translate(-26px, -78px) translateZ(80px) scale(0); } 45%, 90% { transform: translate(-26px, -78px) translateZ(80px) scale(1); } }
+            @keyframes box-scale6 { 0%, 45%, 100% { transform: translate(26px, -78px) translateZ(80px) scale(0); } 50%, 90% { transform: translate(26px, -78px) translateZ(80px) scale(1); } }
+            @keyframes box-scale7 { 0%, 50%, 100% { transform: translate(0px, -104px) translateZ(80px) scale(0); } 55%, 90% { transform: translate(0px, -104px) translateZ(80px) scale(1); } }
+            @keyframes mask { 0%, 65% { transform: translateZ(160px) rotate(var(--r)); } 75%, 100% { transform: translateZ(160px) translateY(320px) rotate(var(--r)); } }
+
+            /* --- SOCIAL MEDIA HOVER CARDS --- */
+            #social-cards-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+                justify-content: center;
+                padding: 10px;
+                position: relative;
+            }
+            .social-card {
+                min-width: 120px;
+                height: 140px;
+                flex: 1 1 120px;
+                background-color: rgba(255, 255, 255, 0.08);
+                border-radius: 14px;
+                position: relative;
+                cursor: pointer;
+            }
+            #social-cards-container:hover > .social-card {
+                background: radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.15), transparent 40%);
+            }
+            .social-card::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(0, 242, 254, 0.4), transparent 40%);
+                border-radius: inherit;
+                opacity: 0;
+                z-index: 2;
+                transition: opacity 0.3s;
+            }
+            #social-cards-container:hover > .social-card::before { opacity: 1; }
+            .social-card-content {
+                position: absolute;
+                inset: 1px;
+                background-color: var(--modal-bg);
+                border-radius: inherit;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 3;
+                text-align: center;
+                color: #fff;
+            }
+            .social-card-content i { font-size: 2rem; margin-bottom: 10px; }
+            .social-card-content h4 { margin: 0; font-size: 0.95rem; font-weight: 700; }
+            .social-card-content p { margin: 5px 0 0; font-size: 0.75rem; color: var(--text-sub); }
             @keyframes liquidFloat {
                 0%, 100% { transform: translateY(0px); }
                 50% { transform: translateY(-12px); }
@@ -1200,13 +1306,16 @@
                     <div class="section-title">BROWSE SECTORS</div>
                     <div id="sector-grid" class="sector-grid">
                         <div class="loader-container">
-                            <div class="nexus-loader">
-                                <div class="nexus-side front"></div>
-                                <div class="nexus-side back"></div>
-                                <div class="nexus-side left"></div>
-                                <div class="nexus-side right"></div>
-                                <div class="nexus-side top"></div>
-                                <div class="nexus-side bottom"></div>
+                            <div class="cube-loader">
+                                <div class="box box0"><div></div></div>
+                                <div class="box box1"><div></div></div>
+                                <div class="box box2"><div></div></div>
+                                <div class="box box3"><div></div></div>
+                                <div class="box box4"><div></div></div>
+                                <div class="box box5"><div></div></div>
+                                <div class="box box6"><div></div></div>
+                                <div class="box box7"><div></div></div>
+                                <div class="ground"><div></div></div>
                             </div>
                         </div>
                     </div>
@@ -1434,12 +1543,13 @@
                 </div>
                 <div
                     id="support-history"
+                    onclick="playOceanSound('pop')"
                     style="
                         height: 300px;
                         overflow-y: auto;
                         overflow-x: hidden;
-                        background: transparent;
-                        border: 1px solid rgba(0, 242, 254, 0.2);
+                        background: linear-gradient(135deg, rgba(135, 206, 250, 0.15), rgba(0, 191, 255, 0.25));
+                        border: 1px solid rgba(0, 242, 254, 0.4);
                         border-radius: 15px;
                         padding: 15px;
                         margin-bottom: 15px;
@@ -1447,9 +1557,10 @@
                         flex-direction: column;
                         gap: 10px;
                         position: relative;
+                        box-shadow: inset 0 0 30px rgba(0,191,255,0.1);
                     "
                 >
-                    <div style="text-align: center; color: var(--text-sub); margin-top: 20px">Ocean Support is online.</div>
+                    <div style="text-align: center; color: #00f2fe; margin-top: 20px; font-weight: bold; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">🌊 Ocean Support is online.</div>
                 </div>
                 <div class="chat-ai-chips">
                     <div class="chat-chip" onclick="document.getElementById('sup-msg').value='Payment issue: '">💳 Payment Issue</div>
@@ -1461,7 +1572,7 @@
                     <div class="icon-btn" style="border-radius: 16px; border-color: var(--glass-border); flex-shrink: 0;" onclick="document.getElementById('sup-file').click()">
                         <i class="fas fa-paperclip"></i>
                     </div>
-                    <input type="file" id="sup-file" accept="image/png, image/jpeg" style="display: none;" onchange="showToast('File selected for upload', 'info')" />
+                    <input type="file" id="sup-file" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleSupportImage(event)" />
                     <input type="text" id="sup-msg" class="inp" placeholder="Type your message..." style="margin: 0" />
                     <button class="btn-main" onclick="sendSupport()" style="width: 60px; margin: 0; flex-shrink: 0;">
                         <i class="fas fa-paper-plane"></i>
@@ -1590,7 +1701,7 @@
                 }, 50);
             }
             const getLoader = () =>
-                `<div class="loader-container"><div class="nexus-loader"><div class="nexus-side front"></div><div class="nexus-side back"></div><div class="nexus-side left"></div><div class="nexus-side right"></div><div class="nexus-side top"></div><div class="nexus-side bottom"></div></div></div>`;
+                `<div class="loader-container"><div class="cube-loader"><div class="box box0"><div></div></div><div class="box box1"><div></div></div><div class="box box2"><div></div></div><div class="box box3"><div></div></div><div class="box box4"><div></div></div><div class="box box5"><div></div></div><div class="box box6"><div></div></div><div class="box box7"><div></div></div><div class="ground"><div></div></div></div></div>`;
             let isPaused = false;
             
             function escapeHtml(text) {
@@ -2568,16 +2679,80 @@
             function openCommunityModal() {
                 db.ref("site_settings/socials").once("value", s => {
                     const soc = s.val() || {};
-                    let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
-                    if(soc.telegram) html += `<button class="btn-sec" onclick="window.open('${soc.telegram}')" style="background:#0088cc; color:white; border:none;"><i class="fab fa-telegram"></i> Telegram</button>`;
-                    if(soc.whatsapp) html += `<button class="btn-sec" onclick="window.open('${soc.whatsapp}')" style="background:#25D366; color:white; border:none;"><i class="fab fa-whatsapp"></i> WhatsApp</button>`;
-                    if(soc.instagram) html += `<button class="btn-sec" onclick="window.open('${soc.instagram}')" style="background:linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color:white; border:none;"><i class="fab fa-instagram"></i> Instagram</button>`;
-                    if(soc.youtube) html += `<button class="btn-sec" onclick="window.open('${soc.youtube}')" style="background:#FF0000; color:white; border:none;"><i class="fab fa-youtube"></i> YouTube</button>`;
+                    let html = `<div id="social-cards-container">`;
+                    if(soc.telegram) html += `<div class="social-card" onclick="window.open('${soc.telegram}')"><div class="social-card-content"><i class="fab fa-telegram" style="color:#0088cc;"></i><h4>Telegram</h4><p>Join Group</p></div></div>`;
+                    if(soc.whatsapp) html += `<div class="social-card" onclick="window.open('${soc.whatsapp}')"><div class="social-card-content"><i class="fab fa-whatsapp" style="color:#25D366;"></i><h4>WhatsApp</h4><p>Connect</p></div></div>`;
+                    if(soc.instagram) html += `<div class="social-card" onclick="window.open('${soc.instagram}')"><div class="social-card-content"><i class="fab fa-instagram" style="background:linear-gradient(45deg, #f09433, #dc2743, #bc1888); -webkit-background-clip: text; color: transparent;"></i><h4>Instagram</h4><p>Follow Us</p></div></div>`;
+                    if(soc.youtube) html += `<div class="social-card" onclick="window.open('${soc.youtube}')"><div class="social-card-content"><i class="fab fa-youtube" style="color:#FF0000;"></i><h4>YouTube</h4><p>Subscribe</p></div></div>`;
+                    if(soc.discord) html += `<div class="social-card" onclick="window.open('${soc.discord}')"><div class="social-card-content"><i class="fab fa-discord" style="color:#7289da;"></i><h4>Discord</h4><p>Community</p></div></div>`;
                     html += `</div>`;
                     document.getElementById('info-title').innerText = "Join Community";
                     document.getElementById('info-body').innerHTML = html;
                     toggleModal('modal-info', true);
+
+                    // Attach the Hover Effect dynamically
+                    setTimeout(() => {
+                        const cardsContainer = document.getElementById("social-cards-container");
+                        if (!cardsContainer) return;
+                        const cards = Array.from(cardsContainer.querySelectorAll(".social-card"));
+                        cardsContainer.addEventListener("mousemove", (e) => {
+                            for(const card of cards){
+                                const rect = card.getBoundingClientRect();
+                                const x = e.clientX - rect.left;
+                                const y = e.clientY - rect.top;
+                                card.style.setProperty("--mouse-x", `${x}px`);
+                                card.style.setProperty("--mouse-y", `${y}px`);
+                            }
+                        });
+                    }, 100);
                 });
+            }
+            
+            // --- FULLY FUNCTIONAL FRONTEND IMAGE UPLOAD SYSTEM ---
+            function handleSupportImage(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                showToast("Compressing image...", "info");
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; // Optimal size for chat without crashing DB
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        // Compress to Base64 JPEG
+                        const base64 = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        // Inject directly into Firebase as HTML payload
+                        db.ref("messages").push({
+                            user: currentUser.id,
+                            userName: currentUser.name,
+                            email: currentUser.email,
+                            title: "Image Upload",
+                            body: `<img src="${base64}" style="width: 100%; border-radius: 12px; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 2px solid #00f2fe; cursor: pointer;" onclick="window.open('${base64}')" />`,
+                            timestamp: Date.now(),
+                        });
+                        
+                        playOceanSound('splash');
+                        showToast("Image Sent Successfully", "success");
+                        
+                        // Auto-scroll
+                        setTimeout(() => {
+                            const div = document.getElementById("support-history");
+                            div.scrollTop = div.scrollHeight;
+                        }, 500);
+                    }
+                    img.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+                event.target.value = ''; // Reset input
             }
             
             function getTagsHtml(app) {
