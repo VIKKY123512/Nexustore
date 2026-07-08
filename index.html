@@ -5,12 +5,39 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <title>NexusStore - Premium Digital Products & Modded Apps</title>
         <meta name="description" content="NexusStore - Premium Digital Products & Tools. Instantly download the best apps, verified and secure." />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://*; img-src 'self' data: blob: https://*;" />
+        <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+        
         <meta property="og:title" content="NexusStore - Premium Digital Products & Modded Apps" />
         <meta property="og:description" content="Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://www.nexustore.in" />
-        <meta property="og:image" content="https://via.placeholder.com/1200x630.png?text=NexusStore+Ocean" />
-        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2300f2fe'/%3E%3Cstop offset='1' stop-color='%234facfe'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='10' y='10' width='80' height='80' rx='20' fill='url(%23g)'/%3E%3C/svg%3E" />
+        <meta property="og:image" content="logo.png" />
+        
+        <link rel="icon" type="image/png" href="logo.png" />
+        <link rel="apple-touch-icon" href="logo.png" />
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "NexusStore",
+          "url": "https://www.nexustore.in/",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://www.nexustore.in/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "NexusStore",
+          "url": "https://www.nexustore.in",
+          "logo": "https://www.nexustore.in/logo.png"
+        }
+        </script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -123,9 +150,9 @@
             }
             header {
                 position: sticky;
-                top: 10px;
+                top: 15px;
                 z-index: 100;
-                margin: 10px 15px 0 15px;
+                margin: 15px 15px 0 15px;
                 padding: 12px 20px;
                 background: var(--glass-header);
                 backdrop-filter: blur(25px);
@@ -136,6 +163,10 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                /* Linux Hardware Acceleration */
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                will-change: transform;
             }
             .logo {
                 font-weight: 800;
@@ -227,17 +258,21 @@
             }
             .search-wrap {
                 position: sticky;
-                top: 75px;
+                top: 95px; /* Locked space from header */
                 z-index: 95;
                 margin-bottom: 25px;
                 padding: 10px;
                 margin-left: -10px;
                 margin-right: -10px;
-                background: rgba(0, 31, 63, 0.4);
+                background: rgba(0, 31, 63, 0.6);
                 backdrop-filter: blur(15px);
                 -webkit-backdrop-filter: blur(15px);
                 border-radius: var(--radius-lg);
                 transition: 0.3s ease;
+                /* Linux Hardware Acceleration */
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                will-change: transform;
             }
             .search-input {
                 width: 100%;
@@ -279,13 +314,17 @@
                 color: var(--text-main);
                 letter-spacing: 0.5px;
                 position: sticky;
-                top: 145px;
+                top: 185px; /* Locked space from search bar */
                 z-index: 90;
                 background: rgba(0, 31, 63, 0.85);
                 backdrop-filter: blur(15px);
                 -webkit-backdrop-filter: blur(15px);
                 border-radius: 12px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                /* Linux Hardware Acceleration */
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                will-change: transform;
             }
             .section-title::before {
                 content: "";
@@ -382,10 +421,12 @@
             /* OPTION B: Vertical Stack Reveal ONLY for Apps inside Categories */
             #cat-page-grid .card {
                 position: sticky;
-                top: 215px; /* Pins beneath the sticky header */
+                top: 255px; /* Pins perfectly beneath the newly spaced sticky header */
                 z-index: 10;
                 box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.7); /* Deep overlapping shadow */
                 border-top: 1px solid rgba(0, 242, 254, 0.5);
+                transform: translateZ(0);
+                will-change: transform, box-shadow;
             }
             
             .chat-bubble {
@@ -854,13 +895,17 @@
                 cursor: pointer;
                 width: calc(100% + 20px);
                 position: sticky;
-                top: 145px;
+                top: 185px; /* Locked space from search bar */
                 z-index: 90;
                 background: rgba(0, 31, 63, 0.85);
                 backdrop-filter: blur(15px);
                 -webkit-backdrop-filter: blur(15px);
                 border-radius: 12px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                /* Linux Hardware Acceleration */
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                will-change: transform;
             }
             .clickable-header .icon-btn {
                 pointer-events: none;
@@ -1031,11 +1076,10 @@
                 -moz-osx-font-smoothing: grayscale;
                 text-rendering: optimizeLegibility;
             }
-            /* STRICT STICKY LOCKS - WILL NEVER MOVE OR GLITCH */
-            header, .search-wrap, .section-title, .clickable-header {
-                -webkit-transform: none !important;
-                transform: none !important;
-                will-change: auto !important;
+            
+            #mobile-viewport {
+                contain: content; /* Strict Layout Isolation (Extreme Performance) */
+                overscroll-behavior-y: none;
             }
             
             .loader-container {
