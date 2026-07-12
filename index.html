@@ -74,6 +74,17 @@
                 --shadow-card: 0 8px 32px 0 rgba(0, 40, 80, 0.37);
                 --glow-accent: 0 0 25px rgba(0, 242, 254, 0.4);
                 --font-body: "Outfit", sans-serif;
+                /* ── Sticky layout spacing (single source of truth) ──
+                   Header, search bar, and category headings all stick to
+                   the top on scroll. These variables guarantee a fixed
+                   breathing-room gap between them on every page, so they
+                   never overlap regardless of content height changes. */
+                --sticky-gap: 12px;
+                --header-top: 12px;
+                --header-height: 62px;
+                --sticky-search-top: calc(var(--header-top) + var(--header-height) + var(--sticky-gap));
+                --search-height: 73px;
+                --sticky-title-top: calc(var(--sticky-search-top) + var(--search-height) + var(--sticky-gap));
             }
             .card, .sector-card, .search-input, .desc-box {
                 background: var(--card-bg) !important;
@@ -156,7 +167,7 @@
             }
 header {
                 position: sticky;
-                top: 12px;
+                top: var(--header-top);
                 z-index: 200;
                 margin: 12px 14px 0 14px;
                 padding: 11px 18px;
@@ -271,7 +282,7 @@ header {
             }
             .search-wrap {
                 position: sticky;
-                top: 88px;
+                top: var(--sticky-search-top);
                 z-index: 150;
                 margin-bottom: 18px;
                 padding: 10px 0 14px 0;
@@ -333,7 +344,7 @@ header {
                 text-transform: uppercase;
                 text-shadow: 0 0 16px rgba(0, 242, 254, 0.2);
                 position: sticky;
-                top: 158px;
+                top: var(--sticky-title-top);
                 z-index: 100;
                 background: linear-gradient(180deg, rgba(0, 10, 30, 0.98) 80%, transparent 100%);
                 backdrop-filter: blur(25px);
@@ -1396,11 +1407,11 @@ header {
                         <div class="icon-btn"><i class="fas fa-arrow-left"></i></div>
                         <h3 style="margin: 0" id="cat-back-title">Sectors</h3>
                     </div>
-                    <h3 class="section-title" id="cat-page-title" style="margin-top: 0; top: 158px;">Apps</h3>
+                    <h3 class="section-title" id="cat-page-title" style="margin-top: 0; top: var(--sticky-title-top);">Apps</h3>
                     <div id="cat-page-grid" class="grid"></div>
                 </div>
                 <div id="wishlist-page" class="page-view">
-                    <div class="section-title" style="top: 158px;">WISHLIST</div>
+                    <div class="section-title" style="top: var(--sticky-title-top);">WISHLIST</div>
                     <div id="wishlist-grid" class="grid"></div>
                 </div>
                 <div id="purchases-page" class="page-view">
@@ -2026,9 +2037,6 @@ header {
  showToast("UTR submitted for verification", "success");
  } catch { showToast("UTR submission failed, try again", "error"); }
  }
-                db.ref("orders/" + orderId + "/paymentRef").set(val);
-                showToast("UTR submitted for verification", "success");
-            }
             function renderPurchases() {
                 const grid = document.getElementById("purchases-grid");                if (!grid) return;
                 grid.innerHTML = "";
@@ -2324,7 +2332,11 @@ header {
 
      db.ref("apps").on("value", (snap) => {
          allApps = snap.val() ? Object.values(snap.val()) : [];
-     }, () => { allApps = []; });
+     }, (err) => {
+         allApps = [];
+         console.error("Failed to load apps from Firebase:", err);
+         showToast("Products unavailable — Firebase Database Rules are blocking reads. See console for details.", "error");
+     });
             db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));
             function renderCategories(parentId) {
                 const grid = document.getElementById("sector-grid");
