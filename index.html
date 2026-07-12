@@ -5,8 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <title>NexusStore - Premium Digital Products & Modded Apps</title>
         <meta name="description" content="NexusStore - Premium Digital Products & Tools. Instantly download the best apps, verified and secure." />
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://*; img-src 'self' data: blob: https://*;" />
+         <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com; frame-src 'none'; upgrade-insecure-requests;" />
         <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+        <meta http-equiv="X-Frame-Options" content="DENY" />
+        <meta name="referrer" content="strict-origin-when-cross-origin" />
+        <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
         
         <meta property="og:title" content="NexusStore - Premium Digital Products & Modded Apps" />
         <meta property="og:description" content="Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly." />
@@ -44,11 +47,14 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <style>
             * {
-                box-sizing: border-box;
-                outline: none;
-                touch-action: manipulation;
-                -webkit-tap-highlight-color: transparent;
-            }
+ box-sizing: border-box;
+ touch-action: manipulation;
+ -webkit-tap-highlight-color: transparent;
+ }
+ :focus-visible {
+ outline: 3px solid #00f2fe;
+ outline-offset: 3px;
+ }
             :root {
                 --bg-color: #001f3f;
                 --bg-gradient: linear-gradient(180deg, #00b4db 0%, #0083b0 50%, #001f3f 100%);
@@ -148,10 +154,10 @@
             #mobile-viewport::-webkit-scrollbar {
                 width: 0px;
             }
-            header {
+header {
                 position: sticky;
                 top: 15px;
-                z-index: 100;
+                z-index: 200;
                 margin: 15px 15px 0 15px;
                 padding: 12px 20px;
                 background: var(--glass-header);
@@ -257,11 +263,14 @@
                 position: relative;
             }
             .search-wrap {
-                position: relative;
-                z-index: 10;
+                position: sticky;
+                top: 90px;
+                z-index: 150;
                 margin-bottom: 25px;
-                padding: 0;
-                background: transparent;
+                padding: 12px 0;
+                background: rgba(0, 31, 63, 0.95);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
                 border-radius: var(--radius-lg);
                 transition: 0.3s ease;
             }
@@ -297,15 +306,19 @@
             .section-title {
                 font-weight: 800;
                 font-size: 1.3rem;
-                margin: 30px 0 15px 0;
-                padding: 0;
+                margin: 0 0 15px 0;
+                padding: 14px 0 10px 0;
                 display: flex;
                 align-items: center;
                 gap: 10px;
                 color: var(--text-main);
                 letter-spacing: 0.5px;
-                position: relative;
-                z-index: 10;
+                position: sticky;
+                top: 160px;
+                z-index: 100;
+                background: rgba(0, 31, 63, 0.95);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
             }
             .section-title::before {
                 content: "";
@@ -402,7 +415,7 @@
             /* OPTION B: Vertical Stack Reveal ONLY for Apps inside Categories */
             #cat-page-grid .card {
                 position: sticky;
-                top: 90px; /* Pins perfectly beneath the main NexusStore header */
+                top: 220px; /* Pins beneath header + search + category heading */
                 z-index: 10;
                 box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.7); /* Deep overlapping shadow */
                 border-top: 1px solid rgba(0, 242, 254, 0.5);
@@ -1239,9 +1252,17 @@
                 transform: scale(0.9) !important;
             }
             .card, .sector-card {
-                animation: smoothSlideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-            }
-        </style>
+ animation: smoothSlideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+ }
+ @media (prefers-reduced-motion: reduce) {
+ *, *::before, *::after {
+ animation-duration: 0.01ms !important;
+ animation-iteration-count: 1 !important;
+ transition-duration: 0.01ms !important;
+ scroll-behavior: auto !important;
+ }
+ }
+ </style>
     </head>
     <body>
         <div id="canvas-container"></div>
@@ -1673,7 +1694,7 @@
                     const joinBtn = document.getElementById("maint-join-btn");
                     if (m.joinLink) {
                         joinBtn.style.display = "inline-block";
-                        joinBtn.onclick = () => window.open(m.joinLink, "_blank");
+                        joinBtn.onclick = () => openExternal(m.joinLink);
                     } else {
                         joinBtn.style.display = "none";
                     }
@@ -1721,28 +1742,41 @@
                 `<div class="loader-container"><div class="cube-loader"><div class="box box0"><div></div></div><div class="box box1"><div></div></div><div class="box box2"><div></div></div><div class="box box3"><div></div></div><div class="box box4"><div></div></div><div class="box box5"><div></div></div><div class="box box6"><div></div></div><div class="box box7"><div></div></div><div class="ground"><div></div></div></div></div>`;
             let isPaused = false;
             
-            function escapeHtml(text) {
-                if (!text) return text;
-                return text.toString()
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-            }
+             function escapeHtml(value) {
+ return String(value ?? "")
+ .replace(/&/g, "&amp;")
+ .replace(/</g, "&lt;")
+ .replace(/>/g, "&gt;")
+ .replace(/"/g, "&quot;")
+ .replace(/'/g, "&#039;");
+ }
+ function safeUrl(value) {
+ try {
+ const u = new URL(String(value || ""), location.origin);
+ return (u.protocol === "https:" || u.protocol === "http:") ? u.href : "";
+ } catch { return ""; }
+ }
+ function openExternal(value) {
+ const url = safeUrl(value);
+ if (!url) { showToast("Invalid or unsafe link", "error"); return; }
+ window.open(url, "_blank", "noopener,noreferrer");
+ }
 
-            function showToast(msg, type = "info") {
-                const box = document.getElementById("toast-container");
-                const el = document.createElement("div");
-                el.className = `toast ${type}`;
-                el.innerHTML = `<i class="fas fa-${type === "success" ? "check-circle" : "info-circle"}"></i> ${msg}`;
-                box.appendChild(el);
-                requestAnimationFrame(() => el.classList.add("show"));
-                setTimeout(() => {
-                    el.classList.remove("show");
-                    setTimeout(() => el.remove(), 400);
-                }, 3000);
-            }
+             function showToast(msg, type = "info") {
+ const box = document.getElementById("toast-container");
+ const el = document.createElement("div");
+ const safe = ["success", "error", "info"].includes(type) ? type : "info";
+ el.className = `toast ${safe}`;
+ const icon = document.createElement("i");
+ icon.className = `fas fa-${safe === "success" ? "check-circle" : safe === "error" ? "exclamation-circle" : "info-circle"}`;
+ el.append(icon, " ", document.createTextNode(String(msg ?? "")));
+ box.appendChild(el);
+ requestAnimationFrame(() => el.classList.add("show"));
+ setTimeout(() => {
+ el.classList.remove("show");
+ setTimeout(() => el.remove(), 400);
+ }, 3000);
+ }
             function toggleModal(id, show) {
                 const el = document.getElementById(id);
                 if (show) {
@@ -1933,13 +1967,23 @@
                 const app = allApps.find((a) => a.id === productId);
                 if (app) handleDownload(app);
             }
-            function submitPaymentRef(orderId) {
-                const input = document.getElementById("ref-input-" + orderId);
-                const val = input ? input.value.trim() : "";
-                if (!/^\d{12}$/.test(val)) {
-                    showToast("Enter the 12-digit UTR number from your payment", "error");
-                    return;
-                }
+            async function submitPaymentRef(orderId) {
+ const input = document.getElementById("ref-input-" + orderId);
+ const val = input ? input.value.trim() : "";
+ if (!/^\d{12}$/.test(val)) {
+ showToast("Enter the 12-digit UTR number from your payment", "error");
+ return;
+ }
+ const order = Object.values(currentUserOrders).find(o => o.orderId === orderId);
+ if (!order || order.status !== "pending" || order.paymentRef) {
+ showToast("This order cannot accept a UTR right now", "error");
+ return;
+ }
+ try {
+ await db.ref("orders/" + orderId + "/paymentRef").set(val);
+ showToast("UTR submitted for verification", "success");
+ } catch { showToast("UTR submission failed, try again", "error"); }
+ }
                 db.ref("orders/" + orderId + "/paymentRef").set(val);
                 showToast("UTR submitted for verification", "success");
             }
@@ -1973,7 +2017,7 @@
                     if (verified) {
                         extra = `<button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="downloadPurchase('${productId}')"><i class="fas fa-download"></i> Download</button>`;
                     } else if (order.paymentRef) {
-                        extra = `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 10px;">UTR submitted: ${order.paymentRef} · awaiting admin check</div>`;
+                        extra = `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 10px;">UTR submitted: ${escapeHtml(order.paymentRef)} · awaiting admin check</div>`;
                     } else {
                         extra = `<div style="margin-top: 10px;" onclick="event.stopPropagation()">
                             <label style="font-size: 0.7rem; color: #f59e0b; font-weight: 700; display: block; margin-bottom: 4px;">Enter your 12-digit UTR number to speed up verification</label>
@@ -1987,10 +2031,10 @@
                             <div style="position: absolute; top: 10px; right: 10px; z-index: 5;">${
                                 verified ? '<img src="bluetick.png" style="width: 24px; height: 24px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));">' : '<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;">PENDING</span>'
                             }</div>
-                            <img src="${logo}" style="width: 100%; height: 90px; object-fit: contain; margin-bottom: 15px; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));"/>
-                            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${title}</h3>
-                            <p style="font-size: 0.75rem; color: #10b981; margin: 0 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${category}</p>
-                            <div style="font-size: 0.7rem; color: var(--text-sub);">₹${order.amount || 0} · ${badge}</div>
+                            <img src="${escapeHtml(logo)}" style="width: 100%; height: 90px; object-fit: contain; margin-bottom: 15px; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));" alt="${escapeHtml(title)}"/>
+ <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${escapeHtml(title)}</h3>
+ <p style="font-size: 0.75rem; color: #10b981; margin: 0 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(category)}</p>
+ <div style="font-size: 0.7rem; color: var(--text-sub);">₹${Number(order.amount) || 0} · ${badge}</div>
                             ${extra}
                         </div>
                     `;
@@ -2057,65 +2101,68 @@
                 }, 4000);
             }
 
-            function initPayment(appId, appTitle, price) {
-                if (!currentUser) {
-                    openAuth();
-                    return;
-                }
-                if (!appId || !appTitle || !price || price <= 0) {
-                    showToast("Invalid payment details", "error");
-                    return;
-                }
-                const existing = currentUserOrders[appId];
-                if (existing && existing.status === "verified") {
-                    showToast("You already own this app!", "info");
-                    toggleModal("modal-detail", false);
-                    return;
-                }
-                if (existing && existing.status === "pending") {
-                    showToast("Payment already pending verification for this item", "info");
-                    toggleModal("modal-detail", false);
-                    navTo("purchases");
-                    return;
-                }
-                const app = allApps.find((a) => a.id === appId);
-                if (!app || !app.cosmofeedLink) {
-                    showToast("Payment link not configured for this product.", "error");
-                    return;
-                }
-                currentPaymentData = { appId, appTitle, amount: price, cosmofeedLink: app.cosmofeedLink };
-                document.getElementById("payment-amount").innerText = "₹" + price;
-                document.getElementById("payment-order-id").innerText = "Created on payment";
-                document.getElementById("process-payment-btn").style.display = "block";
-
-                toggleModal("modal-detail", false);
-                setTimeout(() => {
-                    toggleModal("modal-payment", true);
-                }, 300);
-            }
+            function initPayment(appId) {
+ if (!currentUser) { openAuth(); return; }
+ const app = allApps.find((a) => a.id === appId);
+ const price = Number(app?.price);
+ if (!app || !Number.isInteger(price) || price <= 0 || price > 1000000 || !safeUrl(app.cosmofeedLink)) {
+ showToast("Invalid payment details", "error");
+ return;
+ }
+ const existing = currentUserOrders[appId];
+ if (existing && existing.status === "verified") {
+ showToast("You already own this app!", "info");
+ toggleModal("modal-detail", false);
+ return;
+ }
+ if (existing && existing.status === "pending") {
+ showToast("Payment already pending verification for this item", "info");
+ toggleModal("modal-detail", false);
+ navTo("purchases");
+ return;
+ }
+ currentPaymentData = { appId, appTitle: String(app.title || "").slice(0, 120), amount: price, cosmofeedLink: app.cosmofeedLink };
+ document.getElementById("payment-amount").innerText = "₹" + price;
+ document.getElementById("payment-order-id").innerText = "Created on payment";
+ document.getElementById("process-payment-btn").style.display = "block";
+ toggleModal("modal-detail", false);
+ setTimeout(() => toggleModal("modal-payment", true), 300);
+ }
 
             // Creates the real order record FIRST (so it exists no matter what happens
             // on Cosmofeed's side), then redirects. Nothing here marks it as paid -
             // that only happens when an admin verifies it in admin.html.
-            function redirectToCosmofeed() {
-                if (!currentPaymentData || !currentUser) return;
-                const ref = db.ref("orders").push();
-                ref.set({
-                    userId: currentUser.id,
-                    userEmail: currentUser.email,
-                    userName: currentUser.name,
-                    productId: currentPaymentData.appId,
-                    productTitle: currentPaymentData.appTitle,
-                    amount: currentPaymentData.amount,
-                    status: "pending",
-                    createdAt: Date.now(),
-                });
-                document.getElementById("payment-order-id").innerText = ref.key;
-                toggleModal("modal-payment", false);
-                window.open(currentPaymentData.cosmofeedLink, "_blank");
-                showToast("Complete payment, then check My Purchases", "success");
-                setTimeout(() => navTo("purchases"), 500);
-            }
+            async function redirectToCosmofeed() {
+ if (!currentPaymentData || !currentUser) return;
+ const app = allApps.find((a) => a.id === currentPaymentData.appId);
+ const amount = Number(app?.price);
+ const paymentUrl = safeUrl(app?.cosmofeedLink);
+ if (!app || !Number.isInteger(amount) || amount <= 0 || !paymentUrl) {
+ showToast("Invalid payment configuration", "error");
+ return;
+ }
+ const btn = document.getElementById("process-payment-btn");
+ btn.disabled = true;
+ try {
+ const ref = db.ref("orders").push();
+ await ref.set({
+ userId: currentUser.id,
+ userEmail: currentUser.email,
+ userName: String(currentUser.name || "").slice(0, 80),
+ productId: app.id,
+ productTitle: String(app.title || "").slice(0, 120),
+ amount,
+ status: "pending",
+ createdAt: firebase.database.ServerValue.TIMESTAMP,
+ });
+ document.getElementById("payment-order-id").innerText = ref.key;
+ toggleModal("modal-payment", false);
+ openExternal(paymentUrl);
+ showToast("Complete payment, then check My Purchases", "success");
+ setTimeout(() => navTo("purchases"), 500);
+ } catch { showToast("Could not create order, please retry", "error"); }
+ finally { btn.disabled = false; }
+ }
 
             function closeSuccessOverlay() {
                 document.getElementById("payment-success-overlay").style.display = "none";
@@ -2339,8 +2386,8 @@
                     const lines = app.description.split("\n");
                     let html = '<ul class="desc-list">';
                     lines.forEach((l) => {
-                        if (l.trim()) html += `<li><i class="fas fa-check-circle"></i> ${l}</li>`;
-                    });
+ if (l.trim()) html += `<li><i class="fas fa-check-circle"></i> ${escapeHtml(l.trim())}</li>`;
+ });
                     html += "</ul>";
                     descBox.innerHTML = html;
                 } else {
@@ -2359,9 +2406,7 @@
                             const btn = document.createElement("button");
                             btn.className = "btn-sec";
                             btn.innerText = name;
-                            btn.onclick = () => {
-                                window.open(url, "_blank");
-                            };
+                            btn.onclick = () => openExternal(url);
                             extras.appendChild(btn);
                         }
                     });
@@ -2371,9 +2416,7 @@
                 if (app.extraLinkUrl) {
                     extBtn.style.display = "block";
                     extBtn.innerText = app.extraLinkName || "Watch Tutorial";
-                    extBtn.onclick = () => {
-                        window.open(app.extraLinkUrl, "_blank");
-                    };
+                    extBtn.onclick = () => openExternal(app.extraLinkUrl);
                 } else {
                     extBtn.style.display = "none";
                 }
@@ -2417,7 +2460,7 @@
                     dlBtn.innerHTML = `<i class="fas fa-bolt"></i> BUY NOW FOR ₹${app.price}`;
                     dlBtn.style.background = "var(--premium-gradient)";
                     dlBtn.style.animation = "pulse-premium 1.5s infinite alternate";
-                    dlBtn.onclick = () => initPayment(app.id, app.title, app.price);
+                    dlBtn.onclick = () => initPayment(app.id);
                 } else {
                     // Free app
                     salesBoosters.style.display = "none";
@@ -2464,7 +2507,7 @@
                     userEmail: currentUser.email,
                     timestamp: Date.now(),
                 });
-                window.open(app.downloadLink, "_blank");
+                openExternal(app.downloadLink);
             }
             function openWishlist() {
                 saveScroll();
@@ -2514,32 +2557,32 @@
                 }
                 toggleModal("modal-profile", false);
             }
-            function openSupport() {
-                if (!currentUser) {
-                    openAuth();
-                    return;
-                }
-                toggleModal("modal-support", true);
-                db.ref("messages")
-                    .orderByChild("user")
-                    .equalTo(currentUser.id)
-                    .on("value", (s) => {
-                        const div = document.getElementById("support-history");
-                        div.innerHTML = "";
-                        const msgs = [];
-                        if (s.val()) {
-                            Object.values(s.val()).forEach((m) => {
-                                msgs.push({ text: m.body, type: "user", time: m.timestamp });
-                                if (m.reply) msgs.push({ text: m.reply, type: "admin", time: m.replyTime });
-                            });
-                            msgs.sort((a, b) => a.time - b.time);
-                            msgs.forEach((msg) => {
-                                div.innerHTML += `<div class="chat-bubble chat-${msg.type}">${msg.text}</div>`;
-                            });
-                            div.scrollTop = div.scrollHeight;
-                        }
-                    });
-            }
+            let _supportQuery = null;
+ let _supportHandler = null;
+ function openSupport() {
+ if (!currentUser) { openAuth(); return; }
+ toggleModal("modal-support", true);
+ if (_supportQuery && _supportHandler) _supportQuery.off("value", _supportHandler);
+ _supportQuery = db.ref("messages").orderByChild("user").equalTo(currentUser.id);
+ _supportHandler = (s) => {
+ const div = document.getElementById("support-history");
+ div.replaceChildren();
+ const msgs = [];
+ Object.values(s.val() || {}).forEach((m) => {
+ msgs.push({ text: String(m.body || ""), type: "user", time: Number(m.timestamp) || 0 });
+ if (m.reply) msgs.push({ text: String(m.reply), type: "admin", time: Number(m.replyTime) || 0 });
+ });
+ msgs.sort((a, b) => a.time - b.time);
+ msgs.forEach((msg) => {
+ const bubble = document.createElement("div");
+ bubble.className = `chat-bubble chat-${msg.type === "admin" ? "admin" : "user"}`;
+ bubble.textContent = msg.text;
+ div.appendChild(bubble);
+ });
+ div.scrollTop = div.scrollHeight;
+ };
+ _supportQuery.on("value", _supportHandler);
+ }
             function sendSupport() {
                 const t = document.getElementById("sup-title").value || "Support Request";
                 const m = document.getElementById("sup-msg").value.trim();
@@ -2599,24 +2642,33 @@
                     toggleModal("modal-info", true);
                 });
             }
-            db.ref("site_settings/socials").on("value", (s) => {
-                const soc = s.val() || {};
-                const con = document.getElementById("social-container");
-                const btn = document.getElementById("join-comm-btn");
-                btn.onclick = openCommunityModal;
-                btn.style.display = "inline-block";
-                con.innerHTML = "";
-                const map = {
-                    telegram: "fab fa-telegram",
-                    whatsapp: "fab fa-whatsapp",
-                    instagram: "fab fa-instagram",
-                    youtube: "fab fa-youtube",
-                };
-                Object.keys(map).forEach((k) => {
-                    if (soc[k])
-                        con.innerHTML += `<div class="social-btn" onclick="window.open('${soc[k]}', '_blank')"><i class="${map[k]}"></i></div>`;
-                });
-            });
+            db.ref("site_settings/socials").on("value", (snapshot) => {
+ const soc = snapshot.val() || {};
+ const con = document.getElementById("social-container");
+ const btn = document.getElementById("join-comm-btn");
+ btn.onclick = openCommunityModal;
+ btn.style.display = "inline-block";
+ con.replaceChildren();
+ const map = {
+ telegram: "fab fa-telegram",
+ whatsapp: "fab fa-whatsapp",
+ instagram: "fab fa-instagram",
+ youtube: "fab fa-youtube",
+ };
+ Object.entries(map).forEach(([network, iconClass]) => {
+ const url = safeUrl(soc[network]);
+ if (!url) return;
+ const el = document.createElement("div");
+ const icon = document.createElement("i");
+ el.className = "social-btn";
+ el.setAttribute("role", "button");
+ el.setAttribute("aria-label", "Open " + network);
+ icon.className = iconClass;
+ el.onclick = () => openExternal(url);
+ el.appendChild(icon);
+ con.appendChild(el);
+ });
+ });
             db.ref("notifications")
                 .limitToLast(5)
                 .on("value", (s) => {
@@ -2635,7 +2687,7 @@
                                     minute: "numeric",
                                     hour12: true,
                                 });
-                                list.innerHTML += `<div class="notif-item"><div class="notif-title">${n.title}</div><div class="notif-msg">${n.msg}</div><div class="notif-time">${time}</div></div>`;
+                                list.innerHTML += `<div class="notif-item"><div class="notif-title">${escapeHtml(n.title)}</div><div class="notif-msg">${escapeHtml(n.msg)}</div><div class="notif-time">${escapeHtml(time)}</div></div>`;
                             });
                     } else {
                         list.innerHTML =
@@ -2727,50 +2779,9 @@
             
             // --- FULLY FUNCTIONAL FRONTEND IMAGE UPLOAD SYSTEM ---
             function handleSupportImage(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                showToast("Compressing image...", "info");
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; // Optimal size for chat without crashing DB
-                        const scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
-                        
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        // Compress to Base64 JPEG
-                        const base64 = canvas.toDataURL('image/jpeg', 0.6);
-                        
-                        // Inject directly into Firebase as HTML payload
-                        db.ref("messages").push({
-                            user: currentUser.id,
-                            userName: currentUser.name,
-                            email: currentUser.email,
-                            title: "Image Upload",
-                            body: `<img src="${base64}" style="width: 100%; border-radius: 12px; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 2px solid #00f2fe; cursor: pointer;" onclick="window.open('${base64}')" />`,
-                            timestamp: Date.now(),
-                        });
-                        
-                        playOceanSound('splash');
-                        showToast("Image Sent Successfully", "success");
-                        
-                        // Auto-scroll
-                        setTimeout(() => {
-                            const div = document.getElementById("support-history");
-                            div.scrollTop = div.scrollHeight;
-                        }, 500);
-                    }
-                    img.src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-                event.target.value = ''; // Reset input
-            }
+ event.target.value = "";
+ showToast("Image attachments are disabled for security", "info");
+ }
             
             function getTagsHtml(app) {
                 let tags = `<div class="prod-tags">`;
@@ -2859,11 +2870,11 @@
             for (let i = 0; i < 25; i++) bubbles.push(new Bubble());
             
             function animateCanvas() {
-                requestAnimationFrame(animateCanvas);
-                // We keep animations running even when modals are open so support chat sees bubbles
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                bubbles.forEach(b => { b.update(); b.draw(); });
-            }
+ requestAnimationFrame(animateCanvas);
+ if (document.hidden || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+ ctx.clearRect(0, 0, canvas.width, canvas.height);
+ bubbles.forEach(b => { b.update(); b.draw(); });
+ }
             animateCanvas();
             
             // Fast click detection for popping (works globally, even through transparent modals)
@@ -2891,5 +2902,50 @@
             }
             
             </script>
+            
+            <script>
+ (() => {
+ let suppressPush = false;
+ let lastSig = "";
+ const sig = () => {
+ const page = document.querySelector(".page-view.active")?.id || "home-page";
+ const menu = document.getElementById("side-menu")?.classList.contains("open") ? "menu" : "";
+ const modals = [...document.querySelectorAll(".modal.active")].map(m => m.id).join(",");
+ return `${page}|${menu}|${modals}`;
+ };
+ history.replaceState({ nexus: 1 }, "", location.href);
+ lastSig = sig();
+ new MutationObserver(() => {
+ const s = sig();
+ if (s === lastSig) return;
+ if (!suppressPush) history.pushState({ nexus: 1 }, "", location.href);
+ suppressPush = false;
+ lastSig = s;
+ }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
+ window.addEventListener("popstate", () => {
+ suppressPush = true;
+ const menu = document.getElementById("side-menu");
+ const overlay = document.getElementById("side-menu-overlay");
+ if (menu?.classList.contains("open")) {
+ menu.classList.remove("open");
+ overlay?.classList.remove("open");
+ return;
+ }
+ const activeModals = [...document.querySelectorAll(".modal.active")];
+ if (activeModals.length) {
+ toggleModal(activeModals[activeModals.length - 1].id, false);
+ return;
+ }
+ const activePage = document.querySelector(".page-view.active");
+ if (activePage && activePage.id !== "home-page") {
+ document.querySelectorAll(".page-view").forEach(p => p.classList.remove("active"));
+ document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+ document.getElementById("home-page").classList.add("active");
+ document.getElementById("nav-home").classList.add("active");
+ restoreScroll("home-page");
+ }
+ });
+ })();
+ </script>
     </body>
 </html>
