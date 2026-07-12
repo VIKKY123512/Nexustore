@@ -8,6 +8,12 @@
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://*; img-src 'self' data: blob: https://*;" />
         <meta http-equiv="X-Content-Type-Options" content="nosniff" />
         
+        <!-- EXTREME FAST LOADING PRECONNECTS -->
+        <link rel="dns-prefetch" href="https://www.gstatic.com">
+        <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        
         <meta property="og:title" content="NexusStore - Premium Digital Products & Modded Apps" />
         <meta property="og:description" content="Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly." />
         <meta property="og:type" content="website" />
@@ -257,13 +263,22 @@
                 position: relative;
             }
             .search-wrap {
-                position: relative;
-                z-index: 10;
+                position: sticky;
+                top: 85px; /* Locked space from header */
+                z-index: 95;
                 margin-bottom: 25px;
-                padding: 0;
-                background: transparent;
+                padding: 10px;
+                margin-left: -10px;
+                margin-right: -10px;
+                background: rgba(0, 31, 63, 0.6);
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
                 border-radius: var(--radius-lg);
                 transition: 0.3s ease;
+                /* Linux Hardware Acceleration */
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                will-change: transform;
             }
             .search-input {
                 width: 100%;
@@ -297,15 +312,25 @@
             .section-title {
                 font-weight: 800;
                 font-size: 1.3rem;
-                margin: 30px 0 15px 0;
-                padding: 0;
+                margin: 0 -10px 15px;
+                padding: 15px 10px;
                 display: flex;
                 align-items: center;
                 gap: 10px;
                 color: var(--text-main);
                 letter-spacing: 0.5px;
-                position: relative;
-                z-index: 10;
+                position: sticky;
+                top: 165px; /* Locked space from search bar */
+                z-index: 90;
+                background: rgba(0, 31, 63, 0.85);
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                /* Linux Hardware Acceleration */
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                will-change: transform;
             }
             .section-title::before {
                 content: "";
@@ -402,11 +427,10 @@
             /* OPTION B: Vertical Stack Reveal ONLY for Apps inside Categories */
             #cat-page-grid .card {
                 position: sticky;
-                top: 90px; /* Pins perfectly beneath the main NexusStore header */
+                top: 235px; /* Pins smoothly below the new locked header array */
                 z-index: 10;
-                box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.7); /* Deep overlapping shadow */
+                box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.7);
                 border-top: 1px solid rgba(0, 242, 254, 0.5);
-                /* Linux Hardware Acceleration */
                 transform: translateZ(0);
                 -webkit-transform: translateZ(0);
                 will-change: transform, box-shadow;
@@ -873,12 +897,22 @@
                 display: flex;
                 align-items: center;
                 gap: 15px;
-                margin: 0 0 20px 0;
-                padding: 5px 0;
+                margin: 0 -10px 20px;
+                padding: 15px 10px;
                 cursor: pointer;
-                width: fit-content;
-                position: relative;
-                z-index: 10;
+                width: calc(100% + 20px);
+                position: sticky;
+                top: 165px; /* Identical lock to section-title for all sub-pages */
+                z-index: 90;
+                background: rgba(0, 31, 63, 0.85);
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                /* Linux Hardware Acceleration */
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                will-change: transform;
             }
             .clickable-header .icon-btn {
                 pointer-events: none;
@@ -1810,6 +1844,17 @@
                         .then((s) => {
                             if (s.exists()) {
                                 currentUser = s.val();
+                                
+                                // SYSTEM SUSPEND CHECK
+                                if (currentUser.status === 'suspended') {
+                                    auth.signOut().then(() => {
+                                        showToast("User account suspended by admin. Please contact admin for more details.", "error");
+                                        currentUser = null;
+                                        syncUserUI();
+                                    });
+                                    return; // Kill process immediately
+                                }
+                                
                                 currentUser.id = user.uid;
                                 currentUser.email = user.email;
                                 currentUser.avatar = currentUser.avatar || `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${user.email}`;
@@ -2182,7 +2227,7 @@
                 document.getElementById("nav-purchases").style.display = currentUser ? "flex" : "none";
             }
             function handleAuthAction() {}
-            function navTo(page) {
+            function navTo(page, skipHistory = false) {
                 document.querySelectorAll(".page-view").forEach((p) => p.classList.remove("active"));
                 document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
                 
@@ -2197,7 +2242,21 @@
                     document.getElementById("nav-purchases").classList.add("active");
                     openPurchases();
                 }
+                
+                // Push State to Window History for Native Back Button support
+                if (!skipHistory) {
+                    history.pushState({ page: page }, "", "?" + page);
+                }
             }
+            
+            // Native Hardware Back Button Trigger
+            window.addEventListener("popstate", (event) => {
+                if (event.state && event.state.page) {
+                    navTo(event.state.page, true);
+                } else {
+                    navTo('home', true);
+                }
+            });
 
             function goHome() {
                 navTo("home");
