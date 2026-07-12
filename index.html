@@ -264,7 +264,7 @@
             }
             .search-wrap {
                 position: sticky;
-                top: 85px; /* Locked space from header */
+                top: 75px;
                 z-index: 95;
                 margin-bottom: 25px;
                 padding: 10px;
@@ -320,7 +320,7 @@
                 color: var(--text-main);
                 letter-spacing: 0.5px;
                 position: sticky;
-                top: 165px; /* Locked space from search bar */
+                top: 145px;
                 z-index: 90;
                 background: rgba(0, 31, 63, 0.85);
                 backdrop-filter: blur(15px);
@@ -427,10 +427,11 @@
             /* OPTION B: Vertical Stack Reveal ONLY for Apps inside Categories */
             #cat-page-grid .card {
                 position: sticky;
-                top: 235px; /* Pins smoothly below the new locked header array */
+                top: 215px;
                 z-index: 10;
-                box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.7);
+                box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.7); /* Deep overlapping shadow */
                 border-top: 1px solid rgba(0, 242, 254, 0.5);
+                /* Linux Hardware Acceleration */
                 transform: translateZ(0);
                 -webkit-transform: translateZ(0);
                 will-change: transform, box-shadow;
@@ -902,7 +903,7 @@
                 cursor: pointer;
                 width: calc(100% + 20px);
                 position: sticky;
-                top: 165px; /* Identical lock to section-title for all sub-pages */
+                top: 145px;
                 z-index: 90;
                 background: rgba(0, 31, 63, 0.85);
                 backdrop-filter: blur(15px);
