@@ -5,11 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <title>NexusStore - Premium Digital Products & Modded Apps</title>
         <meta name="description" content="NexusStore - Premium Digital Products & Tools. Instantly download the best apps, verified and secure." />
-         <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com; frame-src 'none'; upgrade-insecure-requests;" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://*; img-src 'self' data: blob: https://*;" />
         <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-        <meta http-equiv="X-Frame-Options" content="DENY" />
-        <meta name="referrer" content="strict-origin-when-cross-origin" />
-        <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
         
         <meta property="og:title" content="NexusStore - Premium Digital Products & Modded Apps" />
         <meta property="og:description" content="Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly." />
@@ -47,14 +44,11 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <style>
             * {
- box-sizing: border-box;
- touch-action: manipulation;
- -webkit-tap-highlight-color: transparent;
- }
- :focus-visible {
- outline: 3px solid #00f2fe;
- outline-offset: 3px;
- }
+                box-sizing: border-box;
+                outline: none;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            }
             :root {
                 --bg-color: #001f3f;
                 --bg-gradient: linear-gradient(180deg, #00b4db 0%, #0083b0 50%, #001f3f 100%);
@@ -74,17 +68,6 @@
                 --shadow-card: 0 8px 32px 0 rgba(0, 40, 80, 0.37);
                 --glow-accent: 0 0 25px rgba(0, 242, 254, 0.4);
                 --font-body: "Outfit", sans-serif;
-                /* ── Sticky layout spacing (single source of truth) ──
-                   Header, search bar, and category headings all stick to
-                   the top on scroll. These variables guarantee a fixed
-                   breathing-room gap between them on every page, so they
-                   never overlap regardless of content height changes. */
-                --sticky-gap: 12px;
-                --header-top: 12px;
-                --header-height: 62px;
-                --sticky-search-top: calc(var(--header-top) + var(--header-height) + var(--sticky-gap));
-                --search-height: 73px;
-                --sticky-title-top: calc(var(--sticky-search-top) + var(--search-height) + var(--sticky-gap));
             }
             .card, .sector-card, .search-input, .desc-box {
                 background: var(--card-bg) !important;
@@ -165,47 +148,41 @@
             #mobile-viewport::-webkit-scrollbar {
                 width: 0px;
             }
-header {
+            header {
                 position: sticky;
-                top: var(--header-top);
-                z-index: 200;
-                margin: 12px 14px 0 14px;
-                padding: 11px 18px;
-                background: rgba(0, 12, 35, 0.88);
-                backdrop-filter: blur(30px);
-                -webkit-backdrop-filter: blur(30px);
-                border: 1.5px solid rgba(0, 242, 254, 0.3);
+                top: 15px;
+                z-index: 100;
+                margin: 15px 15px 0 15px;
+                padding: 12px 20px;
+                background: var(--glass-header);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                border: 1px solid var(--glass-border);
                 border-radius: 50px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 242, 254, 0.06), inset 0 1px 0 rgba(255,255,255,0.06);
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                /* Linux Hardware Acceleration */
                 transform: translateZ(0);
                 -webkit-transform: translateZ(0);
                 will-change: transform;
             }
             .logo {
                 font-weight: 800;
-                font-size: 1.25rem;
+                font-size: 1.3rem;
                 display: flex;
                 align-items: center;
-                gap: 9px;
-                color: #ffffff;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                text-shadow: 0 0 18px rgba(0, 242, 254, 0.2);
+                gap: 8px;
+                color: var(--text-main);
+                letter-spacing: -0.5px;
             }
             .logo i {
                 background: var(--accent-gradient);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
-                font-size: 1.45rem;
-                filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.6));
-                animation: logoPulse 3s ease-in-out infinite;
-            }
-            @keyframes logoPulse {
-                0%, 100% { filter: drop-shadow(0 0 7px rgba(0, 242, 254, 0.5)); }
-                50%       { filter: drop-shadow(0 0 18px rgba(0, 242, 254, 0.95)); }
+                font-size: 1.4rem;
+                filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.5));
             }
             .header-actions {
                 display: flex;
@@ -213,8 +190,8 @@ header {
                 gap: 10px;
             }
             .icon-btn {
-                font-size: 1.05rem;
-                color: rgba(204, 231, 255, 0.85);
+                font-size: 1.1rem;
+                color: var(--text-main);
                 position: relative;
                 width: 40px;
                 height: 40px;
@@ -222,19 +199,18 @@ header {
                 align-items: center;
                 justify-content: center;
                 border-radius: 50%;
-                background: rgba(0, 242, 254, 0.06);
+                background: var(--card-bg);
                 cursor: pointer;
-                transition: all 0.22s ease;
-                border: 1px solid rgba(0, 242, 254, 0.18);
+                transition: all 0.2s ease;
+                border: 1px solid var(--glass-border);
             }
             .icon-btn:active {
-                transform: scale(0.86);
+                transform: scale(0.9);
             }
             .icon-btn:hover {
-                border-color: rgba(0, 242, 254, 0.55);
-                color: #00f2fe;
-                background: rgba(0, 242, 254, 0.1);
-                box-shadow: 0 0 14px rgba(0, 242, 254, 0.28), inset 0 0 8px rgba(0, 242, 254, 0.07);
+                border-color: #06b6d4;
+                color: #06b6d4;
+                box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
             }
             .notif-dot {
                 position: absolute;
@@ -281,89 +257,63 @@ header {
                 position: relative;
             }
             .search-wrap {
-                position: sticky;
-                top: var(--sticky-search-top);
-                z-index: 150;
-                margin-bottom: 18px;
-                padding: 10px 0 14px 0;
-                background: linear-gradient(180deg, rgba(0, 10, 30, 0.98) 0%, rgba(0, 25, 55, 0.96) 100%);
-                backdrop-filter: blur(30px);
-                -webkit-backdrop-filter: blur(30px);
-                border-radius: 0;
-                border-bottom: 1px solid rgba(0, 242, 254, 0.09);
+                position: relative;
+                z-index: 10;
+                margin-bottom: 25px;
+                padding: 0;
+                background: transparent;
+                border-radius: var(--radius-lg);
                 transition: 0.3s ease;
             }
             .search-input {
                 width: 100%;
-                padding: 15px 18px 15px 52px;
-                border-radius: 50px;
-                border: 1.5px solid rgba(0, 242, 254, 0.22);
-                background: rgba(0, 242, 254, 0.04) !important;
+                padding: 18px 20px 18px 55px;
+                border-radius: var(--radius-lg);
+                border: 1px solid rgba(0, 242, 254, 0.3);
+                background: rgba(255, 255, 255, 0.05) !important;
                 backdrop-filter: blur(20px);
                 font-family: var(--font-body);
-                font-size: 0.95rem;
+                font-size: 1rem;
                 color: var(--text-main);
-                box-shadow: 0 4px 22px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255,255,255,0.04);
-                transition: border-color 0.25s, box-shadow 0.25s;
-            }
-            .search-input::placeholder {
-                color: rgba(204, 231, 255, 0.4);
-                font-size: 0.9rem;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                transition: 0.3s;
             }
             .search-input:focus {
-                border-color: rgba(0, 242, 254, 0.65);
-                box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.1), 0 4px 22px rgba(0, 0, 0, 0.3);
-                outline: none;
+                border-color: #00f2fe;
+                box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+                transform: translateY(-2px);
             }
             .search-wrap i {
                 position: absolute;
-                left: 18px;
+                left: 32px;
                 top: 50%;
                 transform: translateY(-50%);
-                color: rgba(0, 242, 254, 0.75);
-                font-size: 1.2rem;
-                text-shadow: 0 0 10px rgba(0, 242, 254, 0.55);
+                color: #00f2fe;
+                font-size: 1.5rem;
+                text-shadow: 0 0 15px rgba(0, 242, 254, 0.9);
                 pointer-events: none;
                 z-index: 10;
-                transition: color 0.25s, text-shadow 0.25s;
-            }
-            .search-wrap:focus-within i {
-                color: #00f2fe;
-                text-shadow: 0 0 18px rgba(0, 242, 254, 0.95);
             }
             .section-title {
                 font-weight: 800;
-                font-size: 1.1rem;
-                margin: 0 0 14px 0;
-                padding: 12px 0 11px 0;
+                font-size: 1.3rem;
+                margin: 30px 0 15px 0;
+                padding: 0;
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                color: #ffffff;
-                letter-spacing: 1.4px;
-                text-transform: uppercase;
-                text-shadow: 0 0 16px rgba(0, 242, 254, 0.2);
-                position: sticky;
-                top: var(--sticky-title-top);
-                z-index: 100;
-                background: linear-gradient(180deg, rgba(0, 10, 30, 0.98) 80%, transparent 100%);
-                backdrop-filter: blur(25px);
-                -webkit-backdrop-filter: blur(25px);
-                border-bottom: 1px solid rgba(0, 242, 254, 0.07);
+                gap: 10px;
+                color: var(--text-main);
+                letter-spacing: 0.5px;
+                position: relative;
+                z-index: 10;
             }
             .section-title::before {
                 content: "";
-                flex-shrink: 0;
-                width: 4px;
-                height: 22px;
-                background: linear-gradient(180deg, #00f2fe 0%, #4facfe 50%, #a855f7 100%);
-                border-radius: 4px;
-                box-shadow: 0 0 12px rgba(0, 242, 254, 0.65);
-                animation: titleBarPulse 2.5s ease-in-out infinite;
-            }
-            @keyframes titleBarPulse {
-                0%, 100% { box-shadow: 0 0 7px rgba(0, 242, 254, 0.5); opacity: 0.88; }
-                50%       { box-shadow: 0 0 18px rgba(0, 242, 254, 0.9); opacity: 1; }
+                width: 6px;
+                height: 24px;
+                background: var(--accent-gradient);
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
             }
             /* Vertical Sectors Display */
             .sector-grid {
@@ -452,7 +402,7 @@ header {
             /* OPTION B: Vertical Stack Reveal ONLY for Apps inside Categories */
             #cat-page-grid .card {
                 position: sticky;
-                top: 220px; /* Pins beneath header + search + category heading */
+                top: 90px; /* Pins perfectly beneath the main NexusStore header */
                 z-index: 10;
                 box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.7); /* Deep overlapping shadow */
                 border-top: 1px solid rgba(0, 242, 254, 0.5);
@@ -1289,17 +1239,9 @@ header {
                 transform: scale(0.9) !important;
             }
             .card, .sector-card {
- animation: smoothSlideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
- }
- @media (prefers-reduced-motion: reduce) {
- *, *::before, *::after {
- animation-duration: 0.01ms !important;
- animation-iteration-count: 1 !important;
- transition-duration: 0.01ms !important;
- scroll-behavior: auto !important;
- }
- }
- </style>
+                animation: smoothSlideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+            }
+        </style>
     </head>
     <body>
         <div id="canvas-container"></div>
@@ -1407,11 +1349,11 @@ header {
                         <div class="icon-btn"><i class="fas fa-arrow-left"></i></div>
                         <h3 style="margin: 0" id="cat-back-title">Sectors</h3>
                     </div>
-                    <h3 class="section-title" id="cat-page-title" style="margin-top: 0; top: var(--sticky-title-top);">Apps</h3>
+                    <h3 class="section-title" id="cat-page-title" style="margin-top: 0">Apps</h3>
                     <div id="cat-page-grid" class="grid"></div>
                 </div>
                 <div id="wishlist-page" class="page-view">
-                    <div class="section-title" style="top: var(--sticky-title-top);">WISHLIST</div>
+                    <div class="section-title">WISHLIST</div>
                     <div id="wishlist-grid" class="grid"></div>
                 </div>
                 <div id="purchases-page" class="page-view">
@@ -1731,7 +1673,7 @@ header {
                     const joinBtn = document.getElementById("maint-join-btn");
                     if (m.joinLink) {
                         joinBtn.style.display = "inline-block";
-                        joinBtn.onclick = () => openExternal(m.joinLink);
+                        joinBtn.onclick = () => window.open(m.joinLink, "_blank");
                     } else {
                         joinBtn.style.display = "none";
                     }
@@ -1779,41 +1721,28 @@ header {
                 `<div class="loader-container"><div class="cube-loader"><div class="box box0"><div></div></div><div class="box box1"><div></div></div><div class="box box2"><div></div></div><div class="box box3"><div></div></div><div class="box box4"><div></div></div><div class="box box5"><div></div></div><div class="box box6"><div></div></div><div class="box box7"><div></div></div><div class="ground"><div></div></div></div></div>`;
             let isPaused = false;
             
-             function escapeHtml(value) {
- return String(value ?? "")
- .replace(/&/g, "&amp;")
- .replace(/</g, "&lt;")
- .replace(/>/g, "&gt;")
- .replace(/"/g, "&quot;")
- .replace(/'/g, "&#039;");
- }
- function safeUrl(value) {
- try {
- const u = new URL(String(value || ""), location.origin);
- return (u.protocol === "https:" || u.protocol === "http:") ? u.href : "";
- } catch { return ""; }
- }
- function openExternal(value) {
- const url = safeUrl(value);
- if (!url) { showToast("Invalid or unsafe link", "error"); return; }
- window.open(url, "_blank", "noopener,noreferrer");
- }
+            function escapeHtml(text) {
+                if (!text) return text;
+                return text.toString()
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
 
-             function showToast(msg, type = "info") {
- const box = document.getElementById("toast-container");
- const el = document.createElement("div");
- const safe = ["success", "error", "info"].includes(type) ? type : "info";
- el.className = `toast ${safe}`;
- const icon = document.createElement("i");
- icon.className = `fas fa-${safe === "success" ? "check-circle" : safe === "error" ? "exclamation-circle" : "info-circle"}`;
- el.append(icon, " ", document.createTextNode(String(msg ?? "")));
- box.appendChild(el);
- requestAnimationFrame(() => el.classList.add("show"));
- setTimeout(() => {
- el.classList.remove("show");
- setTimeout(() => el.remove(), 400);
- }, 3000);
- }
+            function showToast(msg, type = "info") {
+                const box = document.getElementById("toast-container");
+                const el = document.createElement("div");
+                el.className = `toast ${type}`;
+                el.innerHTML = `<i class="fas fa-${type === "success" ? "check-circle" : "info-circle"}"></i> ${msg}`;
+                box.appendChild(el);
+                requestAnimationFrame(() => el.classList.add("show"));
+                setTimeout(() => {
+                    el.classList.remove("show");
+                    setTimeout(() => el.remove(), 400);
+                }, 3000);
+            }
             function toggleModal(id, show) {
                 const el = document.getElementById(id);
                 if (show) {
@@ -1873,30 +1802,18 @@ header {
                 }
                 return seed;
             }
-                         auth.onAuthStateChanged((user) => {
-         if (user) {
-             toggleModal("auth-modal", false);
-             db.ref("users/" + user.uid)
-                 .once("value")
-                 .then((s) => {
-                     if (s.exists()) {
-                         const userData = s.val();
-                         // ── Suspension / Deactivation check ──────────────────
-                         const st = userData.status;
-                         if (st === "suspended" || st === "deactivated") {
-                             auth.signOut();
-                             const msg = st === "suspended"
-                                 ? "⛔ User account suspended by admin. Please contact admin for more details."
-                                 : "⛔ User account deactivated. Please contact admin to reactivate.";
-                             // Show the toast after a tiny delay so the modal closes first
-                             setTimeout(() => showToast(msg, "error"), 200);
-                             return;
-                         }
-                         currentUser = userData;
-                         currentUser.id = user.uid;
-                         currentUser.email = user.email;
-                         currentUser.avatar = currentUser.avatar || `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${user.email}`;
-                     } else {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    toggleModal("auth-modal", false);
+                    db.ref("users/" + user.uid)
+                        .once("value")
+                        .then((s) => {
+                            if (s.exists()) {
+                                currentUser = s.val();
+                                currentUser.id = user.uid;
+                                currentUser.email = user.email;
+                                currentUser.avatar = currentUser.avatar || `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${user.email}`;
+                            } else {
                                 const newUserData = {
                                     name: user.displayName || "User",
                                     email: user.email,
@@ -1941,13 +1858,9 @@ header {
                     syncUserUI();
                 }
             });
-                         // Helper used by the onAuthStateChanged patch above to show suspension error
-             // after a redirect-based sign-in (where auth state fires before the toast is ready)
-             window._nexusSuspendMsg = null;
-
-             function googleSignIn() {
-             const provider = new firebase.auth.GoogleAuthProvider();
-             auth.signInWithPopup(provider).catch((err) => {
+            function googleSignIn() {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                auth.signInWithPopup(provider).catch((err) => {
                     if (err.code === "auth/popup-closed-by-user") return;
                     if (
                         err.code === "auth/popup-blocked" ||
@@ -2020,23 +1933,16 @@ header {
                 const app = allApps.find((a) => a.id === productId);
                 if (app) handleDownload(app);
             }
-            async function submitPaymentRef(orderId) {
- const input = document.getElementById("ref-input-" + orderId);
- const val = input ? input.value.trim() : "";
- if (!/^\d{12}$/.test(val)) {
- showToast("Enter the 12-digit UTR number from your payment", "error");
- return;
- }
- const order = Object.values(currentUserOrders).find(o => o.orderId === orderId);
- if (!order || order.status !== "pending" || order.paymentRef) {
- showToast("This order cannot accept a UTR right now", "error");
- return;
- }
- try {
- await db.ref("orders/" + orderId + "/paymentRef").set(val);
- showToast("UTR submitted for verification", "success");
- } catch { showToast("UTR submission failed, try again", "error"); }
- }
+            function submitPaymentRef(orderId) {
+                const input = document.getElementById("ref-input-" + orderId);
+                const val = input ? input.value.trim() : "";
+                if (!/^\d{12}$/.test(val)) {
+                    showToast("Enter the 12-digit UTR number from your payment", "error");
+                    return;
+                }
+                db.ref("orders/" + orderId + "/paymentRef").set(val);
+                showToast("UTR submitted for verification", "success");
+            }
             function renderPurchases() {
                 const grid = document.getElementById("purchases-grid");                if (!grid) return;
                 grid.innerHTML = "";
@@ -2067,7 +1973,7 @@ header {
                     if (verified) {
                         extra = `<button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="downloadPurchase('${productId}')"><i class="fas fa-download"></i> Download</button>`;
                     } else if (order.paymentRef) {
-                        extra = `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 10px;">UTR submitted: ${escapeHtml(order.paymentRef)} · awaiting admin check</div>`;
+                        extra = `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 10px;">UTR submitted: ${order.paymentRef} · awaiting admin check</div>`;
                     } else {
                         extra = `<div style="margin-top: 10px;" onclick="event.stopPropagation()">
                             <label style="font-size: 0.7rem; color: #f59e0b; font-weight: 700; display: block; margin-bottom: 4px;">Enter your 12-digit UTR number to speed up verification</label>
@@ -2081,10 +1987,10 @@ header {
                             <div style="position: absolute; top: 10px; right: 10px; z-index: 5;">${
                                 verified ? '<img src="bluetick.png" style="width: 24px; height: 24px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));">' : '<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;">PENDING</span>'
                             }</div>
-                            <img src="${escapeHtml(logo)}" style="width: 100%; height: 90px; object-fit: contain; margin-bottom: 15px; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));" alt="${escapeHtml(title)}"/>
- <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${escapeHtml(title)}</h3>
- <p style="font-size: 0.75rem; color: #10b981; margin: 0 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(category)}</p>
- <div style="font-size: 0.7rem; color: var(--text-sub);">₹${Number(order.amount) || 0} · ${badge}</div>
+                            <img src="${logo}" style="width: 100%; height: 90px; object-fit: contain; margin-bottom: 15px; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));"/>
+                            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${title}</h3>
+                            <p style="font-size: 0.75rem; color: #10b981; margin: 0 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${category}</p>
+                            <div style="font-size: 0.7rem; color: var(--text-sub);">₹${order.amount || 0} · ${badge}</div>
                             ${extra}
                         </div>
                     `;
@@ -2151,68 +2057,65 @@ header {
                 }, 4000);
             }
 
-            function initPayment(appId) {
- if (!currentUser) { openAuth(); return; }
- const app = allApps.find((a) => a.id === appId);
- const price = Number(app?.price);
- if (!app || !Number.isInteger(price) || price <= 0 || price > 1000000 || !safeUrl(app.cosmofeedLink)) {
- showToast("Invalid payment details", "error");
- return;
- }
- const existing = currentUserOrders[appId];
- if (existing && existing.status === "verified") {
- showToast("You already own this app!", "info");
- toggleModal("modal-detail", false);
- return;
- }
- if (existing && existing.status === "pending") {
- showToast("Payment already pending verification for this item", "info");
- toggleModal("modal-detail", false);
- navTo("purchases");
- return;
- }
- currentPaymentData = { appId, appTitle: String(app.title || "").slice(0, 120), amount: price, cosmofeedLink: app.cosmofeedLink };
- document.getElementById("payment-amount").innerText = "₹" + price;
- document.getElementById("payment-order-id").innerText = "Created on payment";
- document.getElementById("process-payment-btn").style.display = "block";
- toggleModal("modal-detail", false);
- setTimeout(() => toggleModal("modal-payment", true), 300);
- }
+            function initPayment(appId, appTitle, price) {
+                if (!currentUser) {
+                    openAuth();
+                    return;
+                }
+                if (!appId || !appTitle || !price || price <= 0) {
+                    showToast("Invalid payment details", "error");
+                    return;
+                }
+                const existing = currentUserOrders[appId];
+                if (existing && existing.status === "verified") {
+                    showToast("You already own this app!", "info");
+                    toggleModal("modal-detail", false);
+                    return;
+                }
+                if (existing && existing.status === "pending") {
+                    showToast("Payment already pending verification for this item", "info");
+                    toggleModal("modal-detail", false);
+                    navTo("purchases");
+                    return;
+                }
+                const app = allApps.find((a) => a.id === appId);
+                if (!app || !app.cosmofeedLink) {
+                    showToast("Payment link not configured for this product.", "error");
+                    return;
+                }
+                currentPaymentData = { appId, appTitle, amount: price, cosmofeedLink: app.cosmofeedLink };
+                document.getElementById("payment-amount").innerText = "₹" + price;
+                document.getElementById("payment-order-id").innerText = "Created on payment";
+                document.getElementById("process-payment-btn").style.display = "block";
+
+                toggleModal("modal-detail", false);
+                setTimeout(() => {
+                    toggleModal("modal-payment", true);
+                }, 300);
+            }
 
             // Creates the real order record FIRST (so it exists no matter what happens
             // on Cosmofeed's side), then redirects. Nothing here marks it as paid -
             // that only happens when an admin verifies it in admin.html.
-            async function redirectToCosmofeed() {
- if (!currentPaymentData || !currentUser) return;
- const app = allApps.find((a) => a.id === currentPaymentData.appId);
- const amount = Number(app?.price);
- const paymentUrl = safeUrl(app?.cosmofeedLink);
- if (!app || !Number.isInteger(amount) || amount <= 0 || !paymentUrl) {
- showToast("Invalid payment configuration", "error");
- return;
- }
- const btn = document.getElementById("process-payment-btn");
- btn.disabled = true;
- try {
- const ref = db.ref("orders").push();
- await ref.set({
- userId: currentUser.id,
- userEmail: currentUser.email,
- userName: String(currentUser.name || "").slice(0, 80),
- productId: app.id,
- productTitle: String(app.title || "").slice(0, 120),
- amount,
- status: "pending",
- createdAt: firebase.database.ServerValue.TIMESTAMP,
- });
- document.getElementById("payment-order-id").innerText = ref.key;
- toggleModal("modal-payment", false);
- openExternal(paymentUrl);
- showToast("Complete payment, then check My Purchases", "success");
- setTimeout(() => navTo("purchases"), 500);
- } catch { showToast("Could not create order, please retry", "error"); }
- finally { btn.disabled = false; }
- }
+            function redirectToCosmofeed() {
+                if (!currentPaymentData || !currentUser) return;
+                const ref = db.ref("orders").push();
+                ref.set({
+                    userId: currentUser.id,
+                    userEmail: currentUser.email,
+                    userName: currentUser.name,
+                    productId: currentPaymentData.appId,
+                    productTitle: currentPaymentData.appTitle,
+                    amount: currentPaymentData.amount,
+                    status: "pending",
+                    createdAt: Date.now(),
+                });
+                document.getElementById("payment-order-id").innerText = ref.key;
+                toggleModal("modal-payment", false);
+                window.open(currentPaymentData.cosmofeedLink, "_blank");
+                showToast("Complete payment, then check My Purchases", "success");
+                setTimeout(() => navTo("purchases"), 500);
+            }
 
             function closeSuccessOverlay() {
                 document.getElementById("payment-success-overlay").style.display = "none";
@@ -2300,43 +2203,13 @@ header {
                 navTo("home");
                 restoreScroll("home-page");
             }
-            // ── Loading timeout: clears spinner after 6s if Firebase doesn't respond ──
-     let _catsLoaded = false;
-     const _catsTimeout = setTimeout(() => {
-         if (_catsLoaded) return;
-         _catsLoaded = true;
-         const _grid = document.getElementById("sector-grid");
-         if (_grid && _grid.querySelector(".loader-container")) {
-             _grid.innerHTML = '<div style="text-align:center;padding:50px 20px;color:var(--text-sub);">'
-                 + '<i class="fas fa-store-slash" style="font-size:3rem;display:block;margin-bottom:14px;opacity:0.3;"></i>'
-                 + '<p style="margin:0 0 6px;font-weight:700;font-size:1rem;color:#cce7ff;">No sectors found</p>'
-                 + '<p style="margin:0;font-size:0.82rem;opacity:0.65;">Add sectors from the Admin Panel first</p>'
-                 + '<p style="margin:8px 0 0;font-size:0.75rem;color:#ff6b6b;opacity:0.8;">If you added sectors, check Firebase Database Rules</p></div>';
-         }
-     }, 6000);
-
-     db.ref("categories").on("value", (snap) => {
-         _catsLoaded = true;
-         clearTimeout(_catsTimeout);
-         globalCats = snap.val() || {};
-         renderCategories(null);
-     }, (err) => {
-         _catsLoaded = true;
-         clearTimeout(_catsTimeout);
-         const _grid = document.getElementById("sector-grid");
-         if (_grid) _grid.innerHTML = '<div style="text-align:center;padding:50px 20px;color:var(--text-sub);">'
-             + '<i class="fas fa-exclamation-triangle" style="font-size:3rem;display:block;margin-bottom:14px;color:#ff6b6b;opacity:0.75;"></i>'
-             + '<p style="margin:0 0 6px;font-weight:700;font-size:1rem;">Could not load sectors</p>'
-             + '<p style="margin:0;font-size:0.82rem;opacity:0.65;">Fix Firebase Database Rules (see Step 0 above)</p></div>';
-     });
-
-     db.ref("apps").on("value", (snap) => {
-         allApps = snap.val() ? Object.values(snap.val()) : [];
-     }, (err) => {
-         allApps = [];
-         console.error("Failed to load apps from Firebase:", err);
-         showToast("Products unavailable — Firebase Database Rules are blocking reads. See console for details.", "error");
-     });
+            db.ref("categories").on("value", (s) => {
+                globalCats = s.val() || {};
+                renderCategories(null);
+            });
+            db.ref("apps").on("value", (s) => {
+                if (s.val()) allApps = Object.values(s.val());
+            });
             db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));
             function renderCategories(parentId) {
                 const grid = document.getElementById("sector-grid");
@@ -2350,10 +2223,7 @@ header {
                     });
                 }
                 if (grid.innerHTML === "")
-             grid.innerHTML = '<div style="text-align:center;padding:50px 20px;color:var(--text-sub);">'
-                 + '<i class="fas fa-store" style="font-size:3rem;display:block;margin-bottom:14px;opacity:0.3;"></i>'
-                 + '<p style="margin:0 0 6px;font-weight:700;font-size:1rem;color:#cce7ff;">No sectors available</p>'
-                 + '<p style="margin:0;font-size:0.82rem;opacity:0.65;">Sectors added via Admin will appear here</p></div>';
+                    grid.innerHTML = '<p style="text-align:center; color:var(--text-sub);">Empty</p>';
             }
             function openCategory(id, name) {
                 const grid = document.getElementById("cat-page-grid");
@@ -2469,8 +2339,8 @@ header {
                     const lines = app.description.split("\n");
                     let html = '<ul class="desc-list">';
                     lines.forEach((l) => {
- if (l.trim()) html += `<li><i class="fas fa-check-circle"></i> ${escapeHtml(l.trim())}</li>`;
- });
+                        if (l.trim()) html += `<li><i class="fas fa-check-circle"></i> ${l}</li>`;
+                    });
                     html += "</ul>";
                     descBox.innerHTML = html;
                 } else {
@@ -2489,7 +2359,9 @@ header {
                             const btn = document.createElement("button");
                             btn.className = "btn-sec";
                             btn.innerText = name;
-                            btn.onclick = () => openExternal(url);
+                            btn.onclick = () => {
+                                window.open(url, "_blank");
+                            };
                             extras.appendChild(btn);
                         }
                     });
@@ -2499,7 +2371,9 @@ header {
                 if (app.extraLinkUrl) {
                     extBtn.style.display = "block";
                     extBtn.innerText = app.extraLinkName || "Watch Tutorial";
-                    extBtn.onclick = () => openExternal(app.extraLinkUrl);
+                    extBtn.onclick = () => {
+                        window.open(app.extraLinkUrl, "_blank");
+                    };
                 } else {
                     extBtn.style.display = "none";
                 }
@@ -2543,7 +2417,7 @@ header {
                     dlBtn.innerHTML = `<i class="fas fa-bolt"></i> BUY NOW FOR ₹${app.price}`;
                     dlBtn.style.background = "var(--premium-gradient)";
                     dlBtn.style.animation = "pulse-premium 1.5s infinite alternate";
-                    dlBtn.onclick = () => initPayment(app.id);
+                    dlBtn.onclick = () => initPayment(app.id, app.title, app.price);
                 } else {
                     // Free app
                     salesBoosters.style.display = "none";
@@ -2590,7 +2464,7 @@ header {
                     userEmail: currentUser.email,
                     timestamp: Date.now(),
                 });
-                openExternal(app.downloadLink);
+                window.open(app.downloadLink, "_blank");
             }
             function openWishlist() {
                 saveScroll();
@@ -2640,32 +2514,32 @@ header {
                 }
                 toggleModal("modal-profile", false);
             }
-            let _supportQuery = null;
- let _supportHandler = null;
- function openSupport() {
- if (!currentUser) { openAuth(); return; }
- toggleModal("modal-support", true);
- if (_supportQuery && _supportHandler) _supportQuery.off("value", _supportHandler);
- _supportQuery = db.ref("messages").orderByChild("user").equalTo(currentUser.id);
- _supportHandler = (s) => {
- const div = document.getElementById("support-history");
- div.replaceChildren();
- const msgs = [];
- Object.values(s.val() || {}).forEach((m) => {
- msgs.push({ text: String(m.body || ""), type: "user", time: Number(m.timestamp) || 0 });
- if (m.reply) msgs.push({ text: String(m.reply), type: "admin", time: Number(m.replyTime) || 0 });
- });
- msgs.sort((a, b) => a.time - b.time);
- msgs.forEach((msg) => {
- const bubble = document.createElement("div");
- bubble.className = `chat-bubble chat-${msg.type === "admin" ? "admin" : "user"}`;
- bubble.textContent = msg.text;
- div.appendChild(bubble);
- });
- div.scrollTop = div.scrollHeight;
- };
- _supportQuery.on("value", _supportHandler);
- }
+            function openSupport() {
+                if (!currentUser) {
+                    openAuth();
+                    return;
+                }
+                toggleModal("modal-support", true);
+                db.ref("messages")
+                    .orderByChild("user")
+                    .equalTo(currentUser.id)
+                    .on("value", (s) => {
+                        const div = document.getElementById("support-history");
+                        div.innerHTML = "";
+                        const msgs = [];
+                        if (s.val()) {
+                            Object.values(s.val()).forEach((m) => {
+                                msgs.push({ text: m.body, type: "user", time: m.timestamp });
+                                if (m.reply) msgs.push({ text: m.reply, type: "admin", time: m.replyTime });
+                            });
+                            msgs.sort((a, b) => a.time - b.time);
+                            msgs.forEach((msg) => {
+                                div.innerHTML += `<div class="chat-bubble chat-${msg.type}">${msg.text}</div>`;
+                            });
+                            div.scrollTop = div.scrollHeight;
+                        }
+                    });
+            }
             function sendSupport() {
                 const t = document.getElementById("sup-title").value || "Support Request";
                 const m = document.getElementById("sup-msg").value.trim();
@@ -2725,33 +2599,24 @@ header {
                     toggleModal("modal-info", true);
                 });
             }
-            db.ref("site_settings/socials").on("value", (snapshot) => {
- const soc = snapshot.val() || {};
- const con = document.getElementById("social-container");
- const btn = document.getElementById("join-comm-btn");
- btn.onclick = openCommunityModal;
- btn.style.display = "inline-block";
- con.replaceChildren();
- const map = {
- telegram: "fab fa-telegram",
- whatsapp: "fab fa-whatsapp",
- instagram: "fab fa-instagram",
- youtube: "fab fa-youtube",
- };
- Object.entries(map).forEach(([network, iconClass]) => {
- const url = safeUrl(soc[network]);
- if (!url) return;
- const el = document.createElement("div");
- const icon = document.createElement("i");
- el.className = "social-btn";
- el.setAttribute("role", "button");
- el.setAttribute("aria-label", "Open " + network);
- icon.className = iconClass;
- el.onclick = () => openExternal(url);
- el.appendChild(icon);
- con.appendChild(el);
- });
- });
+            db.ref("site_settings/socials").on("value", (s) => {
+                const soc = s.val() || {};
+                const con = document.getElementById("social-container");
+                const btn = document.getElementById("join-comm-btn");
+                btn.onclick = openCommunityModal;
+                btn.style.display = "inline-block";
+                con.innerHTML = "";
+                const map = {
+                    telegram: "fab fa-telegram",
+                    whatsapp: "fab fa-whatsapp",
+                    instagram: "fab fa-instagram",
+                    youtube: "fab fa-youtube",
+                };
+                Object.keys(map).forEach((k) => {
+                    if (soc[k])
+                        con.innerHTML += `<div class="social-btn" onclick="window.open('${soc[k]}', '_blank')"><i class="${map[k]}"></i></div>`;
+                });
+            });
             db.ref("notifications")
                 .limitToLast(5)
                 .on("value", (s) => {
@@ -2770,7 +2635,7 @@ header {
                                     minute: "numeric",
                                     hour12: true,
                                 });
-                                list.innerHTML += `<div class="notif-item"><div class="notif-title">${escapeHtml(n.title)}</div><div class="notif-msg">${escapeHtml(n.msg)}</div><div class="notif-time">${escapeHtml(time)}</div></div>`;
+                                list.innerHTML += `<div class="notif-item"><div class="notif-title">${n.title}</div><div class="notif-msg">${n.msg}</div><div class="notif-time">${time}</div></div>`;
                             });
                     } else {
                         list.innerHTML =
@@ -2862,9 +2727,50 @@ header {
             
             // --- FULLY FUNCTIONAL FRONTEND IMAGE UPLOAD SYSTEM ---
             function handleSupportImage(event) {
- event.target.value = "";
- showToast("Image attachments are disabled for security", "info");
- }
+                const file = event.target.files[0];
+                if (!file) return;
+                showToast("Compressing image...", "info");
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; // Optimal size for chat without crashing DB
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        // Compress to Base64 JPEG
+                        const base64 = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        // Inject directly into Firebase as HTML payload
+                        db.ref("messages").push({
+                            user: currentUser.id,
+                            userName: currentUser.name,
+                            email: currentUser.email,
+                            title: "Image Upload",
+                            body: `<img src="${base64}" style="width: 100%; border-radius: 12px; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 2px solid #00f2fe; cursor: pointer;" onclick="window.open('${base64}')" />`,
+                            timestamp: Date.now(),
+                        });
+                        
+                        playOceanSound('splash');
+                        showToast("Image Sent Successfully", "success");
+                        
+                        // Auto-scroll
+                        setTimeout(() => {
+                            const div = document.getElementById("support-history");
+                            div.scrollTop = div.scrollHeight;
+                        }, 500);
+                    }
+                    img.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+                event.target.value = ''; // Reset input
+            }
             
             function getTagsHtml(app) {
                 let tags = `<div class="prod-tags">`;
@@ -2953,11 +2859,11 @@ header {
             for (let i = 0; i < 25; i++) bubbles.push(new Bubble());
             
             function animateCanvas() {
- requestAnimationFrame(animateCanvas);
- if (document.hidden || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
- ctx.clearRect(0, 0, canvas.width, canvas.height);
- bubbles.forEach(b => { b.update(); b.draw(); });
- }
+                requestAnimationFrame(animateCanvas);
+                // We keep animations running even when modals are open so support chat sees bubbles
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                bubbles.forEach(b => { b.update(); b.draw(); });
+            }
             animateCanvas();
             
             // Fast click detection for popping (works globally, even through transparent modals)
@@ -2985,50 +2891,5 @@ header {
             }
             
             </script>
-            
-            <script>
- (() => {
- let suppressPush = false;
- let lastSig = "";
- const sig = () => {
- const page = document.querySelector(".page-view.active")?.id || "home-page";
- const menu = document.getElementById("side-menu")?.classList.contains("open") ? "menu" : "";
- const modals = [...document.querySelectorAll(".modal.active")].map(m => m.id).join(",");
- return `${page}|${menu}|${modals}`;
- };
- history.replaceState({ nexus: 1 }, "", location.href);
- lastSig = sig();
- new MutationObserver(() => {
- const s = sig();
- if (s === lastSig) return;
- if (!suppressPush) history.pushState({ nexus: 1 }, "", location.href);
- suppressPush = false;
- lastSig = s;
- }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
- window.addEventListener("popstate", () => {
- suppressPush = true;
- const menu = document.getElementById("side-menu");
- const overlay = document.getElementById("side-menu-overlay");
- if (menu?.classList.contains("open")) {
- menu.classList.remove("open");
- overlay?.classList.remove("open");
- return;
- }
- const activeModals = [...document.querySelectorAll(".modal.active")];
- if (activeModals.length) {
- toggleModal(activeModals[activeModals.length - 1].id, false);
- return;
- }
- const activePage = document.querySelector(".page-view.active");
- if (activePage && activePage.id !== "home-page") {
- document.querySelectorAll(".page-view").forEach(p => p.classList.remove("active"));
- document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
- document.getElementById("home-page").classList.add("active");
- document.getElementById("nav-home").classList.add("active");
- restoreScroll("home-page");
- }
- });
- })();
- </script>
     </body>
 </html>
