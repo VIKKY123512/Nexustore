@@ -158,10 +158,11 @@
             }
             header {
                 position: sticky;
-                top: 15px;
+                top: 25px;
                 z-index: 1000;
                 width: 90%;
-                margin: 15px auto 0 auto;
+                max-width: 400px;
+                margin: 25px auto 0 auto;
                 padding: 12px 20px;
                 background: rgba(255, 255, 255, 0.05); /* Exact match to footer */
                 backdrop-filter: blur(25px);
@@ -172,16 +173,14 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                /* Linux Hardware Acceleration */
                 transform: translateZ(0);
                 -webkit-transform: translateZ(0);
                 will-change: transform;
                 transition: all 0.35s ease;
             }
+            /* Removing .scrolled overrides so it stays clear glass permanently */
             header.scrolled {
-                background: rgba(10, 20, 35, 0.85);
-                border-color: rgba(0, 242, 254, 0.3);
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
             }
             #search-bar-wrap.scrolled {
                 backdrop-filter: blur(30px) saturate(150%);
@@ -278,7 +277,7 @@
             }
             .search-wrap {
                 position: sticky;
-                top: 95px; /* Sits perfectly under the newly shaped header */
+                top: 105px; /* Sits perfectly under the newly shaped floating header */
                 z-index: 90;
                 margin-bottom: 25px;
                 padding: 10px;
@@ -367,9 +366,10 @@
             .sector-img-wrap {
                 width: 100%;
                 display: block;
-                background: #000;
+                background: transparent; /* Removed the black background */
                 position: relative;
                 overflow: hidden;
+                min-height: 120px; /* Retains structure while image loads */
             }
             .sector-img-wrap::after {
                 display: none !important;
@@ -1338,21 +1338,6 @@
                 </div>
             </header>
             
-            <div class="side-menu-overlay" id="side-menu-overlay" onclick="toggleSideMenu()"></div>
-            <div class="side-menu" id="side-menu">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                    <div class="user-pill" onclick="toggleSideMenu(); toggleModal('modal-profile', true)" style="flex: 1; justify-content: center; background: transparent; border-color: #00f2fe;">
-                        <img id="hud-avatar" src="" /><span id="hud-name">Guest</span>
-                    </div>
-                    <i class="fas fa-times" style="font-size: 1.5rem; color: var(--text-main); cursor: pointer; padding-left: 15px;" onclick="toggleSideMenu()"></i>
-                </div>
-                <div class="menu-link" onclick="toggleSideMenu(); toggleModal('modal-profile', true)"><i class="fas fa-user"></i> Profile</div>
-                <div class="menu-link" onclick="toggleSideMenu(); navTo('purchases')"><i class="fas fa-shopping-bag"></i> My Purchases</div>
-                <div class="menu-link" onclick="toggleSideMenu(); navTo('wishlist')"><i class="fas fa-heart"></i> Wishlist</div>
-                <div class="menu-link" onclick="toggleSideMenu(); openSupport()"><i class="fas fa-headset"></i> Support</div>
-                <div class="menu-link" onclick="toggleSideMenu(); openCommunityModal()"><i class="fas fa-users"></i> Join Community</div>
-                <div class="menu-link" onclick="toggleSideMenu(); toggleModal('modal-profile', true)"><i class="fas fa-cog"></i> Settings</div>
-            </div>
             <div id="notif-box">
                 <h4>Alerts</h4>
                 <div id="notif-list">
@@ -1410,6 +1395,24 @@
                 </div>
             </div>
         </div>
+        
+        <!-- MOVED SIDE MENU: Now permanently locked to viewport -->
+        <div class="side-menu-overlay" id="side-menu-overlay" onclick="toggleSideMenu()"></div>
+        <div class="side-menu" id="side-menu">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div class="user-pill" onclick="toggleSideMenu(); toggleModal('modal-profile', true)" style="flex: 1; justify-content: center; background: transparent; border-color: #00f2fe;">
+                    <img id="hud-avatar" src="" /><span id="hud-name">Guest</span>
+                </div>
+                <i class="fas fa-times" style="font-size: 1.5rem; color: var(--text-main); cursor: pointer; padding-left: 15px;" onclick="toggleSideMenu()"></i>
+            </div>
+            <div class="menu-link" onclick="toggleSideMenu(); toggleModal('modal-profile', true)"><i class="fas fa-user"></i> Profile</div>
+            <div class="menu-link" onclick="toggleSideMenu(); navTo('purchases')"><i class="fas fa-shopping-bag"></i> My Purchases</div>
+            <div class="menu-link" onclick="toggleSideMenu(); navTo('wishlist')"><i class="fas fa-heart"></i> Wishlist</div>
+            <div class="menu-link" onclick="toggleSideMenu(); openSupport()"><i class="fas fa-headset"></i> Support</div>
+            <div class="menu-link" onclick="toggleSideMenu(); openCommunityModal()"><i class="fas fa-users"></i> Join Community</div>
+            <div class="menu-link" onclick="toggleSideMenu(); toggleModal('modal-profile', true)"><i class="fas fa-cog"></i> Settings</div>
+        </div>
+
         <div class="bottom-nav">
             <div class="nav-btn active" id="nav-home" onclick="navTo('home')"><i class="fas fa-home"></i></div>
             <div class="nav-btn" id="nav-wishlist" onclick="navTo('wishlist')"><i class="fas fa-heart"></i></div>
@@ -2335,7 +2338,7 @@
                     const sorted = Object.entries(globalCats).sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
                     sorted.forEach(([k, c]) => {
                         if ((c.parentId || null) === parentId) {
-                            grid.innerHTML += ` <div class="sector-card" onclick="openCategory('${k}', '${c.name}')"><div class="sector-img-wrap"><img src="${c.image}"></div><div class="sector-info"><div class="sector-name">${c.name}</div></div></div>`;
+                            grid.innerHTML += ` <div class="sector-card" onclick="openCategory('${k}', '${c.name}')"><div class="sector-img-wrap"><img src="${c.image}" class="skel-img" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.classList.add('loaded')"></div><div class="sector-info"><div class="sector-name">${c.name}</div></div></div>`;
                         }
                     });
                 }
@@ -2369,7 +2372,7 @@
                     sortedSubs.forEach(([k, c]) => {
                         if (c.parentId === id) {
                             hasSubs = true;
-                            grid.innerHTML += ` <div class="sector-card" onclick="openCategory('${k}', '${c.name}')"><div class="sector-img-wrap"><img src="${c.image}"></div><div class="sector-info"><div class="sector-name">${c.name}</div></div></div>`;
+                            grid.innerHTML += ` <div class="sector-card" onclick="openCategory('${k}', '${c.name}')"><div class="sector-img-wrap"><img src="${c.image}" class="skel-img" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.classList.add('loaded')"></div><div class="sector-info"><div class="sector-name">${c.name}</div></div></div>`;
                         }
                     });
                     if (!hasSubs) {
