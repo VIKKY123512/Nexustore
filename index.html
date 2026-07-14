@@ -2330,7 +2330,15 @@
                 renderCategories(null);
             });
             db.ref("apps").on("value", (s) => {
-                if (s.val()) allApps = Object.values(s.val());
+                if (s.val()) {
+                    const rawApps = s.val();
+                    // STRONG SECURITY: Strip download links from global memory to prevent console scraping bypasses.
+                    allApps = Object.values(rawApps).map(app => {
+                        const safeApp = { ...app };
+                        delete safeApp.downloadLink; 
+                        return safeApp;
+                    });
+                }
             });
             db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));
             db.ref("config/rewardAds").on("value", (s) => (globalRewardAdConfig = s.val() || globalRewardAdConfig));
@@ -2702,15 +2710,25 @@
                     if (count >= globalDownloadLimit) return showToast("Daily Limit Reached", "error");
                     db.ref("users/" + currentUser.id).update({ dailyDownloads: count + 1, lastDownloadDate: Date.now() });
                 }
-                showToast("Starting Download...", "success");
-                db.ref("apps/" + app.id + "/downloads").transaction((c) => (c || 0) + 1);
-                db.ref("downloads_log").push({
-                    appName: app.title,
-                    userName: currentUser.name,
-                    userEmail: currentUser.email,
-                    timestamp: Date.now(),
+                
+                showToast("Generating Secure Link...", "info");
+                
+                // STRONG SECURITY: Fetch the actual URL directly from DB only upon authorized click.
+                db.ref("apps/" + app.id + "/downloadLink").once("value").then(snap => {
+                    const secureLink = snap.val();
+                    if (!secureLink) return showToast("Download link unavailable", "error");
+                    
+                    db.ref("apps/" + app.id + "/downloads").transaction((c) => (c || 0) + 1);
+                    db.ref("downloads_log").push({
+                        appName: app.title,
+                        userName: currentUser.name,
+                        userEmail: currentUser.email,
+                        timestamp: Date.now(),
+                    });
+                    
+                    window.open(secureLink, "_blank");
+                    showToast("Download Started!", "success");
                 });
-                window.open(app.downloadLink, "_blank");
             }
             function openWishlist() {
                 saveScroll();
