@@ -1942,7 +1942,7 @@
 
                             if (returnedFromPayment && !paymentReturnHandled) {
                                 paymentReturnHandled = true;
-                                showToast("Enter your 12-digit UTR in My Purchases to confirm payment", "info");
+                                showToast("Payment submitted. Awaiting TranzUPI confirmation...", "info");
                                 setTimeout(() => navTo("purchases"), 600);
                             }
 
@@ -2045,16 +2045,7 @@
                 const app = allApps.find((a) => a.id === productId);
                 if (app) handleDownload(app);
             }
-            function submitPaymentRef(orderId) {
-                const input = document.getElementById("ref-input-" + orderId);
-                const val = input ? input.value.trim() : "";
-                if (!/^\d{12}$/.test(val)) {
-                    showToast("Enter the 12-digit UTR number from your payment", "error");
-                    return;
-                }
-                db.ref("orders/" + orderId + "/paymentRef").set(val);
-                showToast("UTR submitted for verification", "success");
-            }
+            
             function renderPurchases() {
                 const grid = document.getElementById("purchases-grid");                if (!grid) return;
                 grid.innerHTML = "";
@@ -2084,15 +2075,9 @@
                     let extra;
                     if (verified) {
                         extra = `<button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="downloadPurchase('${productId}')"><i class="fas fa-download"></i> Download</button>`;
-                    } else if (order.paymentRef) {
-                        extra = `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 10px;">UTR submitted: ${order.paymentRef} · awaiting admin check</div>`;
                     } else {
-                        extra = `<div style="margin-top: 10px;" onclick="event.stopPropagation()">
-                            <label style="font-size: 0.7rem; color: #f59e0b; font-weight: 700; display: block; margin-bottom: 4px;">Enter your 12-digit UTR number to speed up verification</label>
-                            <div style="display: flex; gap: 6px;">
-                                <input type="text" inputmode="numeric" maxlength="12" id="ref-input-${order.orderId}" class="inp" placeholder="e.g. 123456789012" style="margin-bottom: 0; font-size: 0.8rem;" />
-                                <button class="btn-sec" style="width: auto; padding: 0 14px; margin-bottom: 0;" onclick="submitPaymentRef('${order.orderId}')">Submit</button>
-                            </div>
+                        extra = `<div style="margin-top: 10px; font-size: 0.75rem; color: #f59e0b; font-weight: 600; text-align: center; padding: 8px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                            <i class="fas fa-circle-notch fa-spin"></i> Processing Payment... Awaiting webhook confirmation.
                         </div>`;
                     }
                     grid.innerHTML += `                        <div class="card" onclick="openDetail('${productId}')" style="position: relative; cursor: pointer;">
