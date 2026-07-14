@@ -20,9 +20,10 @@
         <meta property="og:url" content="https://www.nexustore.in" />
         <meta property="og:image" content="logo.png" />
         
-        <link rel="icon" type="image/png" sizes="512x512" href="logo.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="logo.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="logo.png" />
+        <!-- Google Search Requires a tightly cropped multiple of 48px. Name it favicon.ico or favicon.png -->
+        <link rel="icon" href="logo.png" sizes="any">
+        <link rel="icon" href="logo.png" type="image/svg+xml">
+        <link rel="apple-touch-icon" href="logo.png">
         <link rel="shortcut icon" href="logo.png" />
         <script type="application/ld+json">
         {
@@ -1717,12 +1718,9 @@
                     <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 15px; background: rgba(0,0,0,0.2); display: inline-block; padding: 4px 12px; border-radius: 20px;">Order ID: <span id="payment-order-id">---</span></div>
                 </div>
 
-                <div style="background: rgba(16, 185, 129, 0.1); padding: 16px; border-radius: 16px; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3); text-align: center;">
-                    <div style="font-size: 0.95rem; color: var(--text-main); font-weight: 600; margin-bottom: 5px;">Powered by Tranzupi Secured Payments</div>
-                    <div style="font-size: 0.8rem; color: var(--text-sub); display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="fas fa-shield-alt" style="color: #10b981;"></i><span>Bank-Grade Encryption Verified</span></div>
+                <div id="gateway-buttons-container">
+                    <!-- Buttons are injected here dynamically based on Admin configuration -->
                 </div>
-
-                <button class="btn-main" id="process-payment-btn" onclick="initiateTranzupiPayment()" style="width: 100%; margin-bottom: 12px; padding: 18px; font-size: 1.1rem;"><i class="fas fa-external-link-alt"></i> Proceed to Pay Securely</button>
                 <button class="btn-sec" onclick="toggleModal('modal-payment', false)" style="width: 100%;">Cancel</button>
             </div>
         </div>
@@ -1913,6 +1911,12 @@
             let allApps = [];
             let globalCats = {};
             let msgListener = null;
+            let activeGateways = { tranzupi: true, spacepay: false }; // Default state
+            
+            db.ref("config/gateways").on("value", (s) => {
+                if (s.val()) activeGateways = s.val();
+            });
+
             function getGuestSeed() {
                 let seed = localStorage.getItem("guest_seed");
                 if (!seed) {
@@ -2236,43 +2240,56 @@
             }
 
             function initPayment(appId, appTitle, price) {
-                if (!currentUser) {
-                    openAuth();
-                    return;
-                }
-                if (!appId || !appTitle || !price || price <= 0) {
-                    showToast("Invalid payment details", "error");
-                    return;
-                }
+                if (!currentUser) { openAuth(); return; }
+                if (!appId || !appTitle || !price || price <= 0) { showToast("Invalid payment details", "error"); return; }
+                
                 const existing = currentUserOrders[appId];
-                if (existing && existing.status === "verified") {
-                    showToast("You already own this app!", "info");
-                    toggleModal("modal-detail", false);
-                    return;
-                }
-                if (existing && existing.status === "pending") {
-                    showToast("Payment already pending verification for this item", "info");
-                    toggleModal("modal-detail", false);
-                    navTo("purchases");
-                    return;
-                }
+                if (existing && existing.status === "verified") { showToast("You already own this app!", "info"); toggleModal("modal-detail", false); return; }
+                if (existing && existing.status === "pending") { showToast("Payment already pending verification", "info"); toggleModal("modal-detail", false); navTo("purchases"); return; }
+                
                 const app = allApps.find((a) => a.id === appId);
-                if (!app || !app.cosmofeedLink) {
-                    showToast("Payment link not configured for this product.", "error");
-                    return;
-                }
-                currentPaymentData = { appId, appTitle, amount: price, cosmofeedLink: app.cosmofeedLink };
+                if (!app) { showToast("Product not found.", "error"); return; }
+                
+                currentPaymentData = { 
+                    appId, appTitle, amount: price, 
+                    tranzupiLink: app.cosmofeedLink, // Legacy DB field name
+                    spacepayLink: app.spacepayLink 
+                };
+
                 document.getElementById("payment-amount").innerText = "₹" + price;
                 document.getElementById("payment-order-id").innerText = "Created on payment";
-                document.getElementById("process-payment-btn").style.display = "block";
+                
+                // Dynamic Gateway Render Engine
+                const btnContainer = document.getElementById("gateway-buttons-container");
+                btnContainer.innerHTML = "";
+                
+                if (activeGateways.tranzupi && app.cosmofeedLink) {
+                    btnContainer.innerHTML += `
+                        <div style="background: rgba(6, 182, 212, 0.1); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(6, 182, 212, 0.3); text-align: center;">
+                            <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 600;"><i class="fas fa-shield-alt" style="color:#06b6d4;"></i> Secured by TranzUPI</div>
+                        </div>
+                        <button class="btn-main" onclick="initiatePaymentFlow('tranzupi')" style="width: 100%; margin-bottom: 15px;"><i class="fas fa-bolt"></i> Pay via TranzUPI</button>
+                    `;
+                }
+                
+                if (activeGateways.spacepay && app.spacepayLink) {
+                    btnContainer.innerHTML += `
+                        <div style="background: rgba(139, 92, 246, 0.1); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(139, 92, 246, 0.3); text-align: center;">
+                            <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 600;"><i class="fas fa-lock" style="color:#8b5cf6;"></i> Secured by SpacePay</div>
+                        </div>
+                        <button class="btn-main" onclick="initiatePaymentFlow('spacepay')" style="width: 100%; margin-bottom: 15px; background: linear-gradient(135deg, #8b5cf6, #6366f1); box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);"><i class="fas fa-rocket"></i> Pay via SpacePay</button>
+                    `;
+                }
+
+                if(btnContainer.innerHTML === "") {
+                    btnContainer.innerHTML = "<div style='color:var(--danger); text-align:center; margin-bottom:15px; font-size:0.9rem; padding:15px; background:rgba(239, 68, 68, 0.1); border-radius:12px;'>No active payment gateways configured for this product.</div>";
+                }
 
                 toggleModal("modal-detail", false);
-                setTimeout(() => {
-                    toggleModal("modal-payment", true);
-                }, 300);
+                setTimeout(() => toggleModal("modal-payment", true), 300);
             }
 
-            function initiateTranzupiPayment() {
+            function initiatePaymentFlow(gateway) {
                 if (!currentPaymentData || !currentUser) return;
                 const ref = db.ref("orders").push();
                 const orderId = ref.key;
@@ -2285,21 +2302,23 @@
                     productTitle: currentPaymentData.appTitle,
                     amount: currentPaymentData.amount,
                     status: "pending",
+                    gatewayType: gateway,
                     createdAt: Date.now(),
                 });
+                
                 document.getElementById("payment-order-id").innerText = orderId;
                 toggleModal("modal-payment", false);
                 
-                const tranzupiUrl = new URL(currentPaymentData.cosmofeedLink);
-                tranzupiUrl.searchParams.append("client_reference_id", orderId);
-                tranzupiUrl.searchParams.append("customer_email", currentUser.email);
+                const gatewayUrlString = gateway === 'tranzupi' ? currentPaymentData.tranzupiLink : currentPaymentData.spacepayLink;
+                const paymentUrl = new URL(gatewayUrlString);
                 
-                window.open(tranzupiUrl.toString(), "_blank");
+                // Standard tracking params
+                paymentUrl.searchParams.append("client_reference_id", orderId);
+                paymentUrl.searchParams.append("customer_email", currentUser.email);
                 
-                // Trigger Live Verification Overlay Instantly
+                window.open(paymentUrl.toString(), "_blank");
                 showLiveVerification(orderId);
             }
-
             function closeSuccessOverlay() {
                 document.getElementById("payment-success-overlay").style.display = "none";
                 navTo("purchases");
