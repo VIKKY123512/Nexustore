@@ -1677,6 +1677,24 @@
             <button class="btn-main" onclick="closeWelcome()">Got it</button>
         </div>
 
+        <!-- Live Payment Verification Overlay -->
+        <div id="live-verification-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,31,63,0.95); z-index:99999; flex-direction:column; align-items:center; justify-content:center; color:white; backdrop-filter:blur(15px);">
+            <div class="cube-loader" style="transform:scale(0.6); margin-bottom: 30px;">
+                <div class="box box0"><div></div></div>
+                <div class="box box1"><div></div></div>
+                <div class="box box2"><div></div></div>
+                <div class="box box3"><div></div></div>
+                <div class="box box4"><div></div></div>
+                <div class="box box5"><div></div></div>
+                <div class="box box6"><div></div></div>
+                <div class="box box7"><div></div></div>
+                <div class="ground"><div></div></div>
+            </div>
+            <h2 style="font-weight:800; font-size:1.8rem; margin:0 0 10px; color:#fff;">Awaiting Payment...</h2>
+            <p style="color:var(--text-sub); margin:0 0 30px; text-align:center; max-width:80%; line-height:1.5;">Please complete the payment in the opened tab.<br>This screen will auto-verify instantly.</p>
+            <button class="btn-sec" style="width:auto; padding:10px 30px; font-weight:700;" onclick="cancelLiveVerification()">Cancel Payment</button>
+        </div>
+
         <!-- Payment Success Overlay -->
         <div id="payment-success-overlay">
             <div class="success-circle"><i class="fas fa-check"></i></div>
@@ -1942,8 +1960,19 @@
 
                             if (returnedFromPayment && !paymentReturnHandled) {
                                 paymentReturnHandled = true;
-                                showToast("Payment submitted. Awaiting TranzUPI confirmation...", "info");
-                                setTimeout(() => navTo("purchases"), 600);
+                                // Resume Live Verification if redirected back from Gateway
+                                db.ref("orders").orderByChild("userId").equalTo(user.uid).once("value").then(snap => {
+                                    let latestPending = null;
+                                    snap.forEach(child => {
+                                        const o = child.val();
+                                        if(o.status === "pending") {
+                                            if(!latestPending || o.createdAt > latestPending.createdAt) {
+                                                latestPending = { id: child.key, ...o };
+                                            }
+                                        }
+                                    });
+                                    if(latestPending) showLiveVerification(latestPending.id);
+                                });
                             }
 
                             attachOrdersListener(user.uid);
@@ -2097,11 +2126,26 @@
                 });
             }
 
-            // ============ PAYMENT SYSTEM (COSMOFEED) ============
+            // ============ PAYMENT SYSTEM (TRANZUPI REAL-TIME) ============
             let currentPaymentData = null;
             let ordersListener = null;
-            let currentUserOrders = {}; // productId -> {orderId, status, amount, paymentRef}
+            let currentUserOrders = {}; 
             let ordersFirstLoad = true;
+            let liveVerificationOrderId = null;
+
+            function showLiveVerification(orderId) {
+                liveVerificationOrderId = orderId;
+                document.getElementById("live-verification-overlay").style.display = "flex";
+            }
+
+            function cancelLiveVerification() {
+                if (liveVerificationOrderId) {
+                    db.ref("orders/" + liveVerificationOrderId).update({ status: "cancelled" });
+                }
+                liveVerificationOrderId = null;
+                document.getElementById("live-verification-overlay").style.display = "none";
+                showToast("Payment Cancelled", "info");
+            }
 
             function attachOrdersListener(uid) {
                 if (ordersListener) db.ref("orders").off("value", ordersListener);
@@ -2113,7 +2157,13 @@
                     .on("value", (snap) => {
                         const previous = currentUserOrders;
                         const next = {};
+                        const now = Date.now();
+                        
                         Object.entries(snap.val() || {}).forEach(([oid, o]) => {
+                            // Instant cancel/expiration filter (Hides old abandoned orders after 15 mins)
+                            if ((o.status === "pending" || o.status === "cancelled") && (now - (o.createdAt || 0) > 15 * 60 * 1000)) return;
+                            if (o.status === "cancelled") return;
+
                             const ex = next[o.productId];
                             if (!ex || o.status === "verified" || (o.status === "pending" && ex.status !== "verified")) {
                                 next[o.productId] = {
@@ -2121,10 +2171,20 @@
                                     status: o.status,
                                     amount: o.amount,
                                     paymentRef: o.paymentRef || "",
+                                    createdAt: o.createdAt
                                 };
                             }
+
+                            // ⚡ LIVE INTERCEPT TRIGGER (Webhook hit detected!)
+                            if (liveVerificationOrderId === oid && o.status === "verified") {
+                                liveVerificationOrderId = null; 
+                                document.getElementById("live-verification-overlay").style.display = "none";
+                                if(ordersFirstLoad) celebrateUnlock(o.productId); // Fired if redirected back
+                            }
                         });
+                        
                         currentUserOrders = next;
+                        
                         if (!ordersFirstLoad) {
                             Object.entries(next).forEach(([productId, order]) => {
                                 const was = previous[productId];
@@ -2140,21 +2200,39 @@
                     });
             }
 
+            function handleDownloadById(productId) {
+                closeSuccessOverlay();
+                const app = allApps.find((a) => a.id === productId);
+                if (app) handleDownload(app);
+            }
+
             function celebrateUnlock(productId) {
                 const app = allApps.find((a) => a.id === productId);
+                const liveOverlay = document.getElementById("live-verification-overlay");
+                if (liveOverlay) liveOverlay.style.display = "none";
+
                 const overlay = document.getElementById("payment-success-overlay");
                 overlay.innerHTML = `
                     <div class="success-circle"><i class="fas fa-check"></i></div>
                     <h2 style="margin: 0 0 10px; font-weight: 800; font-size: 2rem; text-align: center;">Payment Verified 🎉</h2>
-                    <p style="margin: 0 0 30px; font-size: 1.1rem; opacity: 0.9; text-align: center;">${
+                    <p style="margin: 0 0 20px; font-size: 1.1rem; opacity: 0.9; text-align: center;">${
                         app ? escapeHtml(app.title) : "Your product"
                     } is unlocked!</p>
-                    <button class="btn-main" style="background: white; color: #10b981; max-width: 200px;" onclick="closeSuccessOverlay()">View Purchase</button>
+                    <div style="font-size:0.95rem; color:#fff; margin-bottom:25px; display:flex; align-items:center; gap:8px;"><i class="fas fa-spinner fa-spin"></i> Processing Download...</div>
+                    <button class="btn-main" style="background: white; color: #10b981; max-width: 250px;" onclick="handleDownloadById('${productId}')"><i class="fas fa-download"></i> Download Now</button>
                 `;
                 overlay.style.display = "flex";
+
+                // Auto Trigger Download Instantly
+                if (app) {
+                    setTimeout(() => {
+                        handleDownload(app);
+                    }, 1500);
+                }
+
                 setTimeout(() => {
                     if (overlay.style.display !== "none") closeSuccessOverlay();
-                }, 4000);
+                }, 6000);
             }
 
             function initPayment(appId, appTitle, price) {
@@ -2194,14 +2272,11 @@
                 }, 300);
             }
 
-            // Creates the real order record FIRST (so it exists no matter what happens
-            // on Cosmofeed's side), then redirects. Nothing here marks it as paid -
-            // that only happens when an admin verifies it in admin.html.
             function initiateTranzupiPayment() {
                 if (!currentPaymentData || !currentUser) return;
                 const ref = db.ref("orders").push();
+                const orderId = ref.key;
                 
-                // Create Unverified Order Ticket
                 ref.set({
                     userId: currentUser.id,
                     userEmail: currentUser.email,
@@ -2212,17 +2287,17 @@
                     status: "pending",
                     createdAt: Date.now(),
                 });
-                document.getElementById("payment-order-id").innerText = ref.key;
+                document.getElementById("payment-order-id").innerText = orderId;
                 toggleModal("modal-payment", false);
                 
-                // Format Tranzupi Gateway URL. Append order ID for webhook callback validation
-                const tranzupiUrl = new URL(currentPaymentData.cosmofeedLink); // Repurposed variable name for DB compatibility
-                tranzupiUrl.searchParams.append("client_reference_id", ref.key);
+                const tranzupiUrl = new URL(currentPaymentData.cosmofeedLink);
+                tranzupiUrl.searchParams.append("client_reference_id", orderId);
                 tranzupiUrl.searchParams.append("customer_email", currentUser.email);
                 
                 window.open(tranzupiUrl.toString(), "_blank");
-                showToast("Complete payment securely. Access unlocks automatically.", "success");
-                setTimeout(() => navTo("purchases"), 500);
+                
+                // Trigger Live Verification Overlay Instantly
+                showLiveVerification(orderId);
             }
 
             function closeSuccessOverlay() {
