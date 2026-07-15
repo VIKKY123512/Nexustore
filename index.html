@@ -1365,7 +1365,6 @@
                     ><input type="text" class="search-input" id="search-input" placeholder="Search products..." />
                 </div>
                 <div id="home-page" class="page-view active">
-                    <div id="top-banner-container" class="banner-container"></div>
                     <div class="section-title">BROWSE SECTORS</div>
                     <div id="sector-grid" class="sector-grid">
                         <div class="loader-container">
@@ -1725,34 +1724,7 @@
             </div>
         </div>
 
-        <div id="modal-reward-ad" class="modal">
-            <div class="modal-content" style="text-align: center;">
-                <div class="modal-header">
-                    <div class="modal-title">Unlock Your Download</div>
-                    <button class="close-btn" onclick="cancelRewardFlow()">&times;</button>
-                </div>
-                <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 20px;">
-                    Watch a short advertisement to unlock this free download. By continuing you agree that an ad will be shown before your download is unlocked.
-                </p>
-                <div id="reward-step-label" style="font-weight: 700; color: #00f2fe; margin-bottom: 15px;">Advertisement 1/1</div>
-                <div id="reward-timer-ring" style="width: 140px; height: 140px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; background: conic-gradient(#00f2fe 0deg, rgba(255,255,255,0.1) 0deg); transition: background 0.9s linear;">
-                    <div style="width: 112px; height: 112px; border-radius: 50%; background: rgba(0, 10, 25, 0.85); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 800; color: #fff;" id="reward-timer-text">30</div>
-                </div>
-                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; margin-bottom: 20px;">
-                    <div id="reward-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #00f2fe, #10b981); transition: width 0.4s ease;"></div>
-                </div>
-                <!-- Real ad network SDK (e.g. AdMob/Adsterra rewarded unit) should render here.
-                     This placeholder exists so a real ad script can inject its unit into #ad-slot;
-                     right now it is a countdown placeholder only, not a verified ad impression. -->
-                <div id="ad-slot" style="width: 100%; min-height: 90px; background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-sub); font-size: 0.75rem; margin-bottom: 20px;">
-                    Ad space — connect a real ad network SDK here
-                </div>
-                <button id="reward-continue-btn" class="btn-main" style="width: 100%;" disabled onclick="advanceRewardStep()">Please Wait...</button>
-                <p style="font-size: 0.7rem; color: var(--text-sub); margin-top: 12px;">
-                    ⚠️ Demo countdown only — no ad-completion verification is enforced server-side yet.
-                </p>
-            </div>
-        </div>
+       
 
         <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
@@ -1905,9 +1877,6 @@
             }
             let currentUser = null;
             let globalDownloadLimit = 5;
-            let globalRewardAdConfig = { enabled: false, steps: 3, timerSeconds: 30 };
-            const rewardUnlockedApps = {};
-            let rewardFlowState = null;
             let allApps = [];
             let globalCats = {};
             let msgListener = null;
@@ -2239,7 +2208,7 @@
                 }, 6000);
             }
 
-            function initPayment(appId, appTitle, price) {
+           function initPayment(appId, appTitle, price) {
                 if (!currentUser) { openAuth(); return; }
                 if (!appId || !appTitle || !price || price <= 0) { showToast("Invalid payment details", "error"); return; }
                 
@@ -2250,11 +2219,7 @@
                 const app = allApps.find((a) => a.id === appId);
                 if (!app) { showToast("Product not found.", "error"); return; }
                 
-                currentPaymentData = { 
-                    appId, appTitle, amount: price, 
-                    tranzupiLink: app.cosmofeedLink, // Legacy DB field name
-                    spacepayLink: app.spacepayLink 
-                };
+                currentPaymentData = { appId, appTitle, amount: price };
 
                 document.getElementById("payment-amount").innerText = "₹" + price;
                 document.getElementById("payment-order-id").innerText = "Created on payment";
@@ -2263,7 +2228,7 @@
                 const btnContainer = document.getElementById("gateway-buttons-container");
                 btnContainer.innerHTML = "";
                 
-                if (activeGateways.tranzupi && app.cosmofeedLink) {
+                if (activeGateways.tranzupi) {
                     btnContainer.innerHTML += `
                         <div style="background: rgba(6, 182, 212, 0.1); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(6, 182, 212, 0.3); text-align: center;">
                             <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 600;"><i class="fas fa-shield-alt" style="color:#06b6d4;"></i> Secured by TranzUPI</div>
@@ -2272,7 +2237,7 @@
                     `;
                 }
                 
-                if (activeGateways.spacepay && app.spacepayLink) {
+                if (activeGateways.spacepay) {
                     btnContainer.innerHTML += `
                         <div style="background: rgba(139, 92, 246, 0.1); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(139, 92, 246, 0.3); text-align: center;">
                             <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 600;"><i class="fas fa-lock" style="color:#8b5cf6;"></i> Secured by SpacePay</div>
@@ -2282,7 +2247,7 @@
                 }
 
                 if(btnContainer.innerHTML === "") {
-                    btnContainer.innerHTML = "<div style='color:var(--danger); text-align:center; margin-bottom:15px; font-size:0.9rem; padding:15px; background:rgba(239, 68, 68, 0.1); border-radius:12px;'>No active payment gateways configured for this product.</div>";
+                    btnContainer.innerHTML = "<div style='color:var(--danger); text-align:center; margin-bottom:15px; font-size:0.9rem; padding:15px; background:rgba(239, 68, 68, 0.1); border-radius:12px;'>No active payment gateways configured.</div>";
                 }
 
                 toggleModal("modal-detail", false);
@@ -2291,6 +2256,8 @@
 
             function initiatePaymentFlow(gateway) {
                 if (!currentPaymentData || !currentUser) return;
+                
+                // 1. Instantly create the Order ticket in Firebase
                 const ref = db.ref("orders").push();
                 const orderId = ref.key;
                 
@@ -2309,15 +2276,39 @@
                 document.getElementById("payment-order-id").innerText = orderId;
                 toggleModal("modal-payment", false);
                 
-                const gatewayUrlString = gateway === 'tranzupi' ? currentPaymentData.tranzupiLink : currentPaymentData.spacepayLink;
-                const paymentUrl = new URL(gatewayUrlString);
+                // 2. Alert user and trigger the API call to Vercel
+                showToast("Generating secure payment link...", "info");
                 
-                // Standard tracking params
-                paymentUrl.searchParams.append("client_reference_id", orderId);
-                paymentUrl.searchParams.append("customer_email", currentUser.email);
-                
-                window.open(paymentUrl.toString(), "_blank");
-                showLiveVerification(orderId);
+                // Ensure you replace this domain with your ACTUAL Vercel deployed domain!
+                const backendApiUrl = 'https://nexustore-webhook.vercel.app/api/create-order';
+
+                fetch(backendApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gateway: gateway,
+                        orderId: orderId,
+                        amount: currentPaymentData.amount,
+                        customerEmail: currentUser.email,
+                        customerName: currentUser.name
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.paymentUrl) {
+                        // Success! Backend gave us a brand new, one-time link.
+                        window.open(data.paymentUrl, "_blank");
+                        showLiveVerification(orderId); // Switch to waiting overlay
+                    } else {
+                        showToast("Error generating link: " + (data.error || "Unknown error"), "error");
+                        db.ref("orders/" + orderId).update({ status: "cancelled" }); // Cleanup
+                    }
+                })
+                .catch(err => {
+                    console.error("Backend Error:", err);
+                    showToast("Payment Server is unreachable. Check your Vercel deployment.", "error");
+                    db.ref("orders/" + orderId).update({ status: "cancelled" }); // Cleanup
+                });
             }
             function closeSuccessOverlay() {
                 document.getElementById("payment-success-overlay").style.display = "none";
@@ -2434,37 +2425,7 @@
                     });
                 }
             });
-            db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));
-            db.ref("config/rewardAds").on("value", (s) => (globalRewardAdConfig = s.val() || globalRewardAdConfig));
-            
-            // FRONTEND BANNER SYSTEM
-            db.ref("banner_ads").on("value", (s) => {
-                const bannerContainer = document.getElementById("top-banner-container");
-                if (!bannerContainer) return;
-                bannerContainer.innerHTML = "";
-                const ads = s.val() || {};
-                const now = new Date().toISOString().split('T')[0];
-                const activeBanners = Object.values(ads).filter(a => 
-                    a.active && 
-                    a.position === 'top' && 
-                    (!a.expiry || a.expiry >= now)
-                );
-                
-                if (activeBanners.length > 0) {
-                    bannerContainer.style.display = "block";
-                    activeBanners.forEach(ad => {
-                        const redirectAction = ad.redirect ? `onclick="window.open('${ad.redirect}', '_blank')"` : "";
-                        bannerContainer.innerHTML += `
-                            <div class="sector-img-wrap" style="border-radius: var(--radius-lg); margin-bottom: 15px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" ${redirectAction}>
-                                <div class="skeleton-layer"></div>
-                                <img src="${ad.image}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">
-                            </div>
-                        `;
-                    });
-                } else {
-                    bannerContainer.style.display = "none";
-                }
-            });
+            db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));            
             function renderCategories(parentId) {
                 const grid = document.getElementById("sector-grid");
                 grid.innerHTML = "";
@@ -2686,16 +2647,8 @@
                     dlBtn.style.background = "var(--premium-gradient)";
                     dlBtn.style.animation = "pulse-premium 1.5s infinite alternate";
                     dlBtn.onclick = () => initPayment(app.id, app.title, app.price);
-                } else if (globalRewardAdConfig.enabled && !rewardUnlockedApps[app.id]) {
-                    // Free app gated behind the rewarded-ad flow
-                    salesBoosters.style.display = "none";
-                    manageHeader.style.display = "none";
-                    dlBtn.style.display = "block";
-                    dlBtn.innerHTML = '<i class="fas fa-play-circle"></i> WATCH AD TO UNLOCK DOWNLOAD';
-                    dlBtn.style.background = "linear-gradient(135deg, #0ea5e9, #06b6d4)";
-                    dlBtn.onclick = () => openRewardAdFlow(app);
                 } else {
-                    // Free app, already unlocked this session or ad system disabled
+                    // Free app
                     salesBoosters.style.display = "none";
                     manageHeader.style.display = "none";
                     dlBtn.style.display = "block";
@@ -2712,78 +2665,9 @@
                 if (!app || !document.getElementById("modal-detail").classList.contains("active")) return;
                 if (lastClickedId === app.id) openDetail(app.id);
             }
-            function openRewardAdFlow(app) {
-                if (!currentUser) {
-                    toggleModal("modal-detail", false);
-                    setTimeout(() => openAuth(), 300);
-                    return;
-                }
-                const totalSteps = Math.max(1, globalRewardAdConfig.steps || 1);
-                rewardFlowState = { app: app, currentStep: 1, totalSteps: totalSteps, cancelled: false };
-                toggleModal("modal-detail", false);
-                toggleModal("modal-reward-ad", true);
-                runRewardStepTimer();
-            }
-            function runRewardStepTimer() {
-                if (!rewardFlowState || rewardFlowState.cancelled) return;
-                const duration = Math.max(3, globalRewardAdConfig.timerSeconds || 30);
-                let remaining = duration;
-                const label = document.getElementById("reward-step-label");
-                const ring = document.getElementById("reward-timer-ring");
-                const timerText = document.getElementById("reward-timer-text");
-                const continueBtn = document.getElementById("reward-continue-btn");
-                const progressBar = document.getElementById("reward-progress-bar");
-                label.innerText = `Advertisement ${rewardFlowState.currentStep}/${rewardFlowState.totalSteps}`;
-                continueBtn.disabled = true;
-                continueBtn.innerText = "Please Wait...";
-                timerText.innerText = remaining;
-                ring.style.background = `conic-gradient(#00f2fe 0deg, rgba(255,255,255,0.1) 0deg)`;
-                if (countdownInterval) clearInterval(countdownInterval);
-                countdownInterval = setInterval(() => {
-                    if (!rewardFlowState || rewardFlowState.cancelled) {
-                        clearInterval(countdownInterval);
-                        return;
-                    }
-                    remaining--;
-                    const pct = ((duration - remaining) / duration) * 100;
-                    timerText.innerText = Math.max(0, remaining);
-                    ring.style.background = `conic-gradient(#00f2fe ${pct * 3.6}deg, rgba(255,255,255,0.1) ${pct * 3.6}deg)`;
-                    progressBar.style.width = `${((rewardFlowState.currentStep - 1 + pct / 100) / rewardFlowState.totalSteps) * 100}%`;
-                    if (remaining <= 0) {
-                        clearInterval(countdownInterval);
-                        continueBtn.disabled = false;
-                        continueBtn.innerText =
-                            rewardFlowState.currentStep < rewardFlowState.totalSteps
-                                ? `Continue (${rewardFlowState.currentStep}/${rewardFlowState.totalSteps} completed)`
-                                : "Unlock Download";
-                    }
-                }, 1000);
-            }
-            function advanceRewardStep() {
-                if (!rewardFlowState || rewardFlowState.cancelled) return;
-                if (rewardFlowState.currentStep >= rewardFlowState.totalSteps) {
-                    completeRewardFlow();
-                } else {
-                    rewardFlowState.currentStep++;
-                    runRewardStepTimer();
-                }
-            }
-            function completeRewardFlow() {
-                if (!rewardFlowState) return;
-                const app = rewardFlowState.app;
-                rewardUnlockedApps[app.id] = true;
-                toggleModal("modal-reward-ad", false);
-                rewardFlowState = null;
-                if (countdownInterval) clearInterval(countdownInterval);
-                showToast("Unlocked!", "success");
-                handleDownload(app);
-            }
-            function cancelRewardFlow() {
-                if (rewardFlowState) rewardFlowState.cancelled = true;
-                if (countdownInterval) clearInterval(countdownInterval);
-                toggleModal("modal-reward-ad", false);
-                rewardFlowState = null;
-            }
+           
+            
+          
             function handleDownload(app) {
                 if (!currentUser) {
                     toggleModal("modal-detail", false);
