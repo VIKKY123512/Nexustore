@@ -1679,29 +1679,40 @@
         </div>
 
         <!-- Live Payment Verification Overlay -->
-        <div id="live-verification-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,31,63,0.95); z-index:99999; flex-direction:column; align-items:center; justify-content:center; color:white; backdrop-filter:blur(15px);">
-            <div class="cube-loader" style="transform:scale(0.6); margin-bottom: 30px;">
-                <div class="box box0"><div></div></div>
-                <div class="box box1"><div></div></div>
-                <div class="box box2"><div></div></div>
-                <div class="box box3"><div></div></div>
-                <div class="box box4"><div></div></div>
-                <div class="box box5"><div></div></div>
-                <div class="box box6"><div></div></div>
-                <div class="box box7"><div></div></div>
-                <div class="ground"><div></div></div>
+        <div id="live-verification-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle at center, rgba(0, 31, 63, 0.98) 0%, rgba(0, 10, 25, 0.99) 100%); z-index:99999; flex-direction:column; align-items:center; justify-content:center; color:white; backdrop-filter:blur(25px); -webkit-backdrop-filter:blur(25px); animation: fadeIn 0.4s ease;">
+            <div style="position: relative; width: 140px; height: 140px; margin-bottom: 30px; display: flex; align-items: center; justify-content: center;">
+                <div style="position: absolute; width: 100%; height: 100%; border: 3px dashed rgba(0, 242, 254, 0.3); border-radius: 50%; animation: spin 8s linear infinite;"></div>
+                <div style="position: absolute; width: 85%; height: 85%; border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 50%; animation: spin 4s reverse linear infinite;"></div>
+                <div class="cube-loader" style="transform:scale(0.4); margin: 0; z-index: 10;">
+                    <div class="box box0"><div></div></div>
+                    <div class="box box1"><div></div></div>
+                    <div class="box box2"><div></div></div>
+                    <div class="box box3"><div></div></div>
+                    <div class="box box4"><div></div></div>
+                    <div class="box box5"><div></div></div>
+                    <div class="box box6"><div></div></div>
+                    <div class="box box7"><div></div></div>
+                    <div class="ground"><div></div></div>
+                </div>
             </div>
-            <h2 style="font-weight:800; font-size:1.8rem; margin:0 0 10px; color:#fff;">Awaiting Payment...</h2>
-            <p style="color:var(--text-sub); margin:0 0 30px; text-align:center; max-width:80%; line-height:1.5;">Please complete the payment in the opened tab.<br>This screen will auto-verify instantly.</p>
-            <button class="btn-sec" style="width:auto; padding:10px 30px; font-weight:700;" onclick="cancelLiveVerification()">Cancel Payment</button>
+            <h2 style="font-weight:900; font-size:1.8rem; margin:0 0 10px; color:#fff; text-shadow: 0 0 15px rgba(0, 242, 254, 0.4); letter-spacing: 0.5px;">SECURE PAYMENT IN PROCESS</h2>
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); padding: 6px 16px; border-radius: 30px; margin-bottom: 20px;">
+                <span style="width: 8px; height: 8px; background: #00e676; border-radius: 50%; display: inline-block; animation: pulse-premium 1s infinite alternate;"></span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #00e676; text-transform: uppercase; letter-spacing: 1px;">Awaiting UPI Confirmation</span>
+            </div>
+            <p style="color:var(--text-sub); margin:0 0 35px; text-align:center; max-width:80%; line-height:1.6; font-size: 0.95rem;">Please complete the UPI transfer in your app.<br><span style="color: #00f2fe; font-weight: 600;">Do not close this page.</span> It will automatically verify and unlock.</p>
+            <button class="btn-sec" style="width:auto; padding:12px 35px; font-weight:700; border-radius: 50px; background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.15); color: #ff1744;" onclick="cancelLiveVerification()"><i class="fas fa-times-circle" style="margin-right: 8px;"></i> Cancel Payment</button>
         </div>
 
         <!-- Payment Success Overlay -->
-        <div id="payment-success-overlay">
-            <div class="success-circle"><i class="fas fa-check"></i></div>
-            <h2 style="margin: 0 0 10px; font-weight: 800; font-size: 2rem;">Payment Successful</h2>
-            <p style="margin: 0 0 30px; font-size: 1.1rem; opacity: 0.9;">You are now a VIP Member!</p>
-            <button class="btn-main" style="background: white; color: #10b981; max-width: 200px;" onclick="closeSuccessOverlay()">Continue</button>
+        <div id="payment-success-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle at center, #0d5c3a 0%, #031c10 100%); z-index:30000; flex-direction:column; align-items:center; justify-content:center; color:white; animation: slideUpSuccess 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
+            <div style="position: relative; margin-bottom: 25px;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 170px; height: 170px; background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, transparent 70%); animation: pulse-premium 2s infinite;"></div>
+                <div class="success-circle" style="width: 110px; height: 110px; border: 4px solid #00e676; box-shadow: 0 0 30px rgba(0, 230, 118, 0.5); background: rgba(0,0,0,0.2);"><i class="fas fa-check" style="color: #00e676; text-shadow: 0 0 10px rgba(0, 230, 118, 0.6);"></i></div>
+            </div>
+            <h2 style="margin: 0 0 8px; font-weight: 900; font-size: 2.2rem; text-shadow: 0 0 20px rgba(0,230,118,0.3); letter-spacing: 0.5px;">Payment Verified!</h2>
+            <p style="margin: 0 0 30px; font-size: 1.15rem; opacity: 0.95; font-weight: 500; letter-spacing: 0.2px;">Thank you! Your secure transaction is complete.</p>
+            <button class="btn-main" style="background: white; color: #10b981; max-width: 250px; font-weight: 800; font-size: 1.05rem; padding: 16px 40px; border-radius: 50px; box-shadow: 0 15px 30px rgba(0,0,0,0.3);" onclick="closeSuccessOverlay()"><i class="fas fa-cloud-download-alt" style="margin-right: 8px;"></i> Access Downloads</button>
         </div>
 
         <!-- Payment Modal -->
@@ -2258,17 +2269,17 @@
                         });
                         
                         currentUserOrders = next;
-                       
-                       if (!ordersFirstLoad) {
-                           Object.entries(next).forEach(([productId, order]) => {
-                               const was = previous[productId];
-                               // Fix: Only celebrate the transition from pending to verified within the current session
-                               if (order.status === "verified" && was && was.status === "pending") {
-                                   celebrateUnlock(productId);
-                               }
-                           });
-                       }
-                       ordersFirstLoad = false;
+                        
+                        if (!ordersFirstLoad) {
+                            Object.entries(next).forEach(([productId, order]) => {
+                                const was = previous[productId];
+                                // Fix: Only celebrate the transition from pending to verified within the current active session
+                                if (order.status === "verified" && was && was.status === "pending") {
+                                    celebrateUnlock(productId);
+                                }
+                            });
+                        }
+                        ordersFirstLoad = false;
                         const openApp = allApps.find((a) => a.id === lastClickedId);
                         if (openApp) refreshDetailButton(openApp);
                         if (document.getElementById("purchases-page").classList.contains("active")) renderPurchases();
