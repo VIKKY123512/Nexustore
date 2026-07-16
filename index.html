@@ -1771,20 +1771,20 @@
             let paymentReturnHandled = false;
 
             if (returnedFromPayment) {
-                // FORCE UI FREEZE: Instantly hide login screen and show verification overlay
-                document.getElementById("login-overlay").style.display = "none";
-                document.getElementById("admin-panel").style.display = "flex";
-                
-                const overlay = document.getElementById("live-verification-overlay");
-                overlay.style.display = "flex";
-                const h2 = overlay.querySelector("h2");
-                const p = overlay.querySelector("p");
-                const btn = overlay.querySelector(".btn-sec");
-                if (h2) h2.innerText = "Verifying Bank Payment...";
-                if (p) p.innerText = "Please wait securely while we confirm with the bank.";
-                if (btn) btn.style.display = "none"; 
-
+                // INSTANT SAFE UI FREEZE: Safely covers the screen before Firebase even loads
                 window.history.replaceState({}, document.title, window.location.pathname);
+                document.addEventListener("DOMContentLoaded", () => {
+                    const overlay = document.getElementById("live-verification-overlay");
+                    if (overlay) {
+                        overlay.style.display = "flex";
+                        const h2 = overlay.querySelector("h2");
+                        const p = overlay.querySelector("p");
+                        const btn = overlay.querySelector(".btn-sec");
+                        if (h2) h2.innerText = "Verifying Bank Payment...";
+                        if (p) p.innerText = "Please wait securely while we confirm with the bank.";
+                        if (btn) btn.style.display = "none"; 
+                    }
+                });
             }
 
             let countdownInterval = null;
@@ -1950,10 +1950,9 @@
                                 const targetOrderId = returnedOrderId || new URLSearchParams(window.location.search).get("client_reference_id");
                                 
                                 if (targetOrderId) {
-                                    // Show overlay immediately
                                     showLiveVerification(targetOrderId);
-                                    // Clean the URL so reloads don't re-trigger it
-                                    window.history.replaceState({}, document.title, window.location.pathname);
+                                    // ⚡ INSTANT FAST VERIFY: Do not wait 3 seconds. Force ping Vercel immediately!
+                                    checkPaymentStatusLive(targetOrderId);
                                 } else {
                                     // Fallback: Find latest pending order
                                     db.ref("orders").orderByChild("userId").equalTo(user.uid).once("value").then(snap => {
@@ -2074,14 +2073,20 @@
                 if (app) handleDownload(app);
             }
             
+            let lastRenderedPurchases = "";
+
             function renderPurchases() {
-                const grid = document.getElementById("purchases-grid");                if (!grid) return;
-                grid.innerHTML = "";
+                const grid = document.getElementById("purchases-grid");                
+                if (!grid) return;
+                
                 const entries = currentUser ? Object.entries(currentUserOrders) : [];
                 const countEl = document.getElementById("purchase-count");
                 if (countEl) countEl.innerText = entries.filter(([, o]) => o.status === "verified").length;
+                
+                let newHtml = "";
+                
                 if (entries.length === 0) {
-                    grid.innerHTML = `
+                    newHtml = `
                         <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; color: var(--text-sub);">
                             <i class="fas fa-shopping-bag" style="font-size: 3rem; opacity: 0.3; margin-bottom: 15px; display: block;"></i>
                             <p style="font-size: 1rem; margin: 0 0 10px;">No purchases yet</p>
@@ -2089,40 +2094,45 @@
                             <button class="btn-main" style="width: auto; padding: 10px 20px; margin-top: 20px; font-size: 0.9rem;" onclick="event.stopPropagation(); setTimeout(() => navTo('home'), 150);"><i class="fas fa-shopping-cart"></i> Browse Apps</button>
                         </div>
                     `;
-                    return;
+                } else {
+                    entries.forEach(([productId, order]) => {
+                        const app = allApps.find((a) => a.id === productId);
+                        const title = app ? app.title : "Product";
+                        const logo = app ? app.logo : "";
+                        const category = app ? (app.category || "") : "";
+                        const verified = order.status === "verified";
+                        const badge = verified
+                            ? '<span style="color:#00f2fe; font-weight:700;"><img src="bluetick.png" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;">Verified</span>'
+                            : '<span style="color:#f59e0b; font-weight:700;">⏳ Pending</span>';
+                        let extra;
+                        if (verified) {
+                            extra = `<button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="downloadPurchase('${productId}')"><i class="fas fa-download"></i> Download</button>`;
+                        } else {
+                            extra = `<div style="margin-top: 10px; font-size: 0.75rem; color: #f59e0b; font-weight: 600; text-align: center; padding: 8px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                                <i class="fas fa-circle-notch fa-spin"></i> Processing Payment...
+                            </div>`;
+                        }
+                        newHtml += `<div class="card" onclick="openDetail('${productId}')" style="position: relative; cursor: pointer;">
+                                <div style="position: absolute; top: 10px; right: 10px; z-index: 5;">${
+                                    verified ? '<img src="bluetick.png" style="width: 24px; height: 24px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));">' : '<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;">PENDING</span>'
+                                }</div>
+                                <div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;">
+                                    <div class="skeleton-layer"></div>
+                                    <img src="${logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));"/>
+                                </div>
+                                <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${title}</h3>
+                                <p style="font-size: 0.75rem; color: #10b981; margin: 0 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${category}</p>
+                                <div style="font-size: 0.7rem; color: var(--text-sub);">₹${order.amount || 0} · ${badge}</div>
+                                ${extra}
+                            </div>`;
+                    });
                 }
-                entries.forEach(([productId, order]) => {
-                    const app = allApps.find((a) => a.id === productId);
-                    const title = app ? app.title : "Product";
-                    const logo = app ? app.logo : "";
-                    const category = app ? (app.category || "") : "";
-                    const verified = order.status === "verified";
-                    const badge = verified
-                        ? '<span style="color:#00f2fe; font-weight:700;"><img src="bluetick.png" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;">Verified</span>'
-                        : '<span style="color:#f59e0b; font-weight:700;">⏳ Pending</span>';
-                    let extra;
-                    if (verified) {
-                        extra = `<button class="btn-main" style="width: 100%; padding: 10px; margin-top: 10px; font-size: 0.9rem;" onclick="downloadPurchase('${productId}')"><i class="fas fa-download"></i> Download</button>`;
-                    } else {
-                        extra = `<div style="margin-top: 10px; font-size: 0.75rem; color: #f59e0b; font-weight: 600; text-align: center; padding: 8px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
-                            <i class="fas fa-circle-notch fa-spin"></i> Processing Payment... Awaiting webhook confirmation.
-                        </div>`;
-                    }
-                    grid.innerHTML += `                        <div class="card" onclick="openDetail('${productId}')" style="position: relative; cursor: pointer;">
-                            <div style="position: absolute; top: 10px; right: 10px; z-index: 5;">${
-                                verified ? '<img src="bluetick.png" style="width: 24px; height: 24px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));">' : '<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;">PENDING</span>'
-                            }</div>
-                            <div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;">
-                                <div class="skeleton-layer"></div>
-                                <img src="${logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));"/>
-                            </div>
-                            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main);">${title}</h3>
-                            <p style="font-size: 0.75rem; color: #10b981; margin: 0 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${category}</p>
-                            <div style="font-size: 0.7rem; color: var(--text-sub);">₹${order.amount || 0} · ${badge}</div>
-                            ${extra}
-                        </div>
-                    `;
-                });
+                
+                // ANTI-BLINK LOGIC: Only updates the screen if the HTML actually changed
+                if (lastRenderedPurchases !== newHtml) {
+                    grid.innerHTML = newHtml;
+                    lastRenderedPurchases = newHtml;
+                }
             }
 
             // ============ PAYMENT SYSTEM (TRANZUPI REAL-TIME) ============
@@ -2168,7 +2178,6 @@
                 if (!orderId || !auth.currentUser) return; 
                 try {
                     const idToken = await auth.currentUser.getIdToken();
-                    
                     const res = await fetch(`${VERCEL_API_URL}/api/verify-order`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
@@ -2176,9 +2185,9 @@
                     });
                     
                     if (!res.ok) {
-                        console.error("Vercel Backend returned an error.");
-                        // CRITICAL FIX: Do NOT stop polling. Keep trying in case the server wakes up.
-                        return;
+                        const errData = await res.json().catch(() => ({}));
+                        console.error("Vercel Backend Error:", errData);
+                        return; // Keep trying quietly in background in case server restarts
                     }
 
                     const data = await res.json();
@@ -2200,8 +2209,10 @@
                         showToast("Payment expired or was rejected by bank.", "error");
                     }
                 } catch (e) {
-                    console.error("Network Fetch Error:", e);
-                    // CRITICAL FIX: Do NOT crash the screen. Firebase Webhook listener is still running as a backup!
+                    console.error("Live verification ping failed", e);
+                    // Server is down. Allow user to cancel safely.
+                    const btn = document.querySelector("#live-verification-overlay .btn-sec");
+                    if (btn) btn.style.display = "block";
                 }
             }
 
