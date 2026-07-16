@@ -1764,16 +1764,28 @@
             });
             let scrollPos = {};
             let lastClickedId = null;
-            // The URL can carry a hint that a payment just happened (for a nicer landing
-            // experience), but it is NEVER treated as proof of payment. Actual purchase
-            // status always comes from the live "orders" listener below, which only
-            // changes when the admin verifies it in admin.html.
+            
             const urlParams = new URLSearchParams(window.location.search);
             const returnedFromPayment = urlParams.get("status") === "success";
-            const returnedOrderId = urlParams.get("orderId");
+            // Checks multiple URL patterns depending on what TranzUPI sends back
+            const returnedOrderId = urlParams.get("orderId") || urlParams.get("client_reference_id") || urlParams.get("product");
             let paymentReturnHandled = false;
+
             if (returnedFromPayment) {
                 window.history.replaceState({}, document.title, window.location.pathname);
+                // INSTANT UI FREEZE: Prevents the "Sign-in" screen from flashing during redirect
+                document.addEventListener("DOMContentLoaded", () => {
+                    const overlay = document.getElementById("live-verification-overlay");
+                    if (overlay) {
+                        overlay.style.display = "flex";
+                        const h2 = overlay.querySelector("h2");
+                        const p = overlay.querySelector("p");
+                        const btn = overlay.querySelector(".btn-sec");
+                        if (h2) h2.innerText = "Verifying Bank Payment...";
+                        if (p) p.innerText = "Please wait securely while we confirm with the bank.";
+                        if (btn) btn.style.display = "none"; // Hide cancel button to prevent accidental breaks
+                    }
+                });
             }
 
             let countdownInterval = null;
@@ -2121,33 +2133,40 @@
 
             function showLiveVerification(orderId) {
                 liveVerificationOrderId = orderId;
-                document.getElementById("live-verification-overlay").style.display = "flex";
+                const overlay = document.getElementById("live-verification-overlay");
+                overlay.style.display = "flex";
                 
-                // ⚡ PROFESSIONAL ENGINE: Active Polling
+                // Ensure UI is set correctly in case they didn't redirect
+                const h2 = overlay.querySelector("h2");
+                const p = overlay.querySelector("p");
+                const btn = overlay.querySelector(".btn-sec");
+                if (h2) h2.innerText = "Verifying Bank Payment...";
+                if (p) p.innerText = "Please wait securely while we confirm with the bank.";
+                if (btn) btn.style.display = "block"; // Only allow cancel if they haven't paid yet
+                
                 if (verificationPolling) clearInterval(verificationPolling);
                 verificationPolling = setInterval(() => {
                     checkPaymentStatusLive(orderId);
-                }, 3000); // Pings securely every 3 seconds
+                }, 3000); 
             }
 
             function cancelLiveVerification() {
                 if (liveVerificationOrderId) {
-                    // SECURE CLEANUP: Completely deletes the abandoned order from the DB
-                    db.ref("orders/" + liveVerificationOrderId).remove();
+                    // Do not hard-delete, mark as cancelled to ensure Admin/User panels clear correctly
+                    db.ref("orders/" + liveVerificationOrderId).update({ status: "cancelled" });
                 }
                 liveVerificationOrderId = null;
                 if (verificationPolling) clearInterval(verificationPolling);
                 document.getElementById("live-verification-overlay").style.display = "none";
                 showToast("Payment Cancelled", "info");
-                
-                // Instantly re-render to clear it from the screen
                 if (document.getElementById("purchases-page").classList.contains("active")) renderPurchases();
             }
 
             async function checkPaymentStatusLive(orderId) {
-                if (!orderId || !auth.currentUser) return; // Wait for Firebase Auth to be ready
+                if (!orderId || !auth.currentUser) return; 
                 try {
                     const idToken = await auth.currentUser.getIdToken();
+                    // Pings your NEW Vercel API
                     const res = await fetch('https://nexustore-webhook.vercel.app/api/verify-order', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
@@ -2160,12 +2179,16 @@
                         
                         db.ref("orders/" + orderId).once("value").then(snap => {
                             const o = snap.val();
-                            if (o && liveVerificationOrderId === orderId) {
+                            if (o) {
                                 liveVerificationOrderId = null;
                                 document.getElementById("live-verification-overlay").style.display = "none";
                                 celebrateUnlock(o.productId);
                             }
                         });
+                    } else if (data.status === 'cancelled') {
+                        if (verificationPolling) clearInterval(verificationPolling);
+                        document.getElementById("live-verification-overlay").style.display = "none";
+                        showToast("Payment expired or was rejected.", "error");
                     }
                 } catch (e) {
                     console.error("Live verification ping failed", e);
@@ -2375,9 +2398,9 @@
                 }
 
                 if (data.paymentUrl) {
-                    // Success! Backend gave us a brand new, one-time link.
-                    window.open(data.paymentUrl, "_blank");
-                    showLiveVerification(orderId); // Switch to waiting overlay
+                    // Success! Backend gave us a brand new link.
+                    // CRITICAL FIX: Use location.href instead of window.open to prevent the double-tab loop!
+                    window.location.href = data.paymentUrl;
                 } else {
                     showToast("Error generating link: " + (data.error || "Unknown error"), "error");
                     db.ref("orders/" + orderId).update({ status: "cancelled" }); // Cleanup
