@@ -1595,10 +1595,11 @@
                 >
                     <i class="fas fa-users"></i> Join Community
                 </button>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0">
-                    <button class="btn-sec" onclick="openPage('about')">About</button
-                    ><button class="btn-sec" onclick="openPage('privacy')">Privacy</button
-                    ><button class="btn-sec" onclick="openPage('terms')">Terms</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0">
+                    <button class="btn-sec" onclick="openPage('about')">About</button>
+                    <button class="btn-sec" onclick="openPage('privacy')">Privacy</button>
+                    <button class="btn-sec" onclick="openPage('terms')">Terms</button>
+                    <button class="btn-sec" onclick="openPage('refund')">Refund</button>
                 </div>
                 <div
                     id="social-container"
@@ -2257,16 +2258,17 @@
                         });
                         
                         currentUserOrders = next;
-                        
-                        if (!ordersFirstLoad) {
-                            Object.entries(next).forEach(([productId, order]) => {
-                                const was = previous[productId];
-                                if (order.status === "verified" && (!was || was.status !== "verified")) {
-                                    celebrateUnlock(productId);
-                                }
-                            });
-                        }
-                        ordersFirstLoad = false;
+                       
+                       if (!ordersFirstLoad) {
+                           Object.entries(next).forEach(([productId, order]) => {
+                               const was = previous[productId];
+                               // Fix: Only celebrate the transition from pending to verified within the current session
+                               if (order.status === "verified" && was && was.status === "pending") {
+                                   celebrateUnlock(productId);
+                               }
+                           });
+                       }
+                       ordersFirstLoad = false;
                         const openApp = allApps.find((a) => a.id === lastClickedId);
                         if (openApp) refreshDetailButton(openApp);
                         if (document.getElementById("purchases-page").classList.contains("active")) renderPurchases();
@@ -2889,7 +2891,17 @@
                             });
                             msgs.sort((a, b) => a.time - b.time);
                             msgs.forEach((msg) => {
-                                div.innerHTML += `<div class="chat-bubble chat-${msg.type}">${msg.text}</div>`;
+                                if (msg.type === "admin") {
+                                    div.innerHTML += `
+                                        <div class="chat-bubble chat-admin" style="display: flex; flex-direction: column;">
+                                            <div style="font-size: 0.75rem; color: #00f2fe; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                                                Support Admin <img src="bluetick.png" style="width: 12px; height: 12px; vertical-align: middle;" alt="Verified">
+                                            </div>
+                                            <div>${msg.text}</div>
+                                        </div>`;
+                                } else {
+                                    div.innerHTML += `<div class="chat-bubble chat-user">${msg.text}</div>`;
+                                }
                             });
                             div.scrollTop = div.scrollHeight;
                         }
@@ -2949,7 +2961,7 @@
             }, 350);
             function openPage(type) {
                 db.ref("site_settings/pages/" + type).once("value", (s) => {
-                    document.getElementById("info-title").innerText = type.toUpperCase();
+                    document.getElementById("info-title").innerText = type === "refund" ? "REFUND POLICY" : type.toUpperCase();
                     document.getElementById("info-body").innerText = s.val() || "No content";
                     toggleModal("modal-info", true);
                 });
