@@ -2084,7 +2084,7 @@
                             <i class="fas fa-shopping-bag" style="font-size: 3rem; opacity: 0.3; margin-bottom: 15px; display: block;"></i>
                             <p style="font-size: 1rem; margin: 0 0 10px;">No purchases yet</p>
                             <p style="font-size: 0.9rem; margin: 0;">Browse & buy amazing apps now!</p>
-                            <button class="btn-main" style="width: auto; padding: 10px 20px; margin-top: 20px; font-size: 0.9rem;" onclick="goHome()"><i class="fas fa-shopping-cart"></i> Browse Apps</button>
+                            <button class="btn-main" style="width: auto; padding: 10px 20px; margin-top: 20px; font-size: 0.9rem;" onclick="event.stopPropagation(); setTimeout(() => navTo('home'), 150);"><i class="fas fa-shopping-cart"></i> Browse Apps</button>
                         </div>
                     `;
                     return;
@@ -2166,12 +2166,22 @@
                 if (!orderId || !auth.currentUser) return; 
                 try {
                     const idToken = await auth.currentUser.getIdToken();
-                    // Pings your NEW Vercel API
                     const res = await fetch('https://nexustore-webhook.vercel.app/api/verify-order', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
                         body: JSON.stringify({ orderId: orderId })
                     });
+                    
+                    // 🛑 LIFESAVER FIX: If Vercel crashes, stop the infinite loading instantly and show the error!
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        console.error("Vercel Backend Error:", errData);
+                        if (verificationPolling) clearInterval(verificationPolling);
+                        document.getElementById("live-verification-overlay").style.display = "none";
+                        showToast(`Backend Error: ${errData.error || res.statusText}`, "error");
+                        return;
+                    }
+
                     const data = await res.json();
                     
                     if (data.status === 'verified' || data.success === true) {
@@ -2188,10 +2198,13 @@
                     } else if (data.status === 'cancelled') {
                         if (verificationPolling) clearInterval(verificationPolling);
                         document.getElementById("live-verification-overlay").style.display = "none";
-                        showToast("Payment expired or was rejected.", "error");
+                        showToast("Payment expired or was rejected by bank.", "error");
                     }
                 } catch (e) {
                     console.error("Live verification ping failed", e);
+                    if (verificationPolling) clearInterval(verificationPolling);
+                    document.getElementById("live-verification-overlay").style.display = "none";
+                    showToast("Network error. Could not connect to Vercel API.", "error");
                 }
             }
 
