@@ -1933,16 +1933,15 @@
 
                             if (returnedFromPayment && !paymentReturnHandled) {
                                 paymentReturnHandled = true;
-                                if (returnedOrderId) {
-                                    // Exact order round-trip from the gateway redirect - instant, no lookup needed.
-                                    db.ref("orders/" + returnedOrderId).once("value").then(s => {
-                                        const o = s.val();
-                                        if (o && o.userId === user.uid && (o.status === "pending" || o.status === "verified")) {
-                                            showLiveVerification(returnedOrderId);
-                                        }
-                                    });
+                                const targetOrderId = returnedOrderId || new URLSearchParams(window.location.search).get("client_reference_id");
+                                
+                                if (targetOrderId) {
+                                    // Show overlay immediately
+                                    showLiveVerification(targetOrderId);
+                                    // Clean the URL so reloads don't re-trigger it
+                                    window.history.replaceState({}, document.title, window.location.pathname);
                                 } else {
-                                    // Fallback for older payment links that didn't carry an orderId.
+                                    // Fallback: Find latest pending order
                                     db.ref("orders").orderByChild("userId").equalTo(user.uid).once("value").then(snap => {
                                         let latestPending = null;
                                         snap.forEach(child => {
@@ -1953,7 +1952,10 @@
                                                 }
                                             }
                                         });
-                                        if(latestPending) showLiveVerification(latestPending.id);
+                                        if(latestPending) {
+                                            showLiveVerification(latestPending.id);
+                                            window.history.replaceState({}, document.title, window.location.pathname);
+                                        }
                                     });
                                 }
                             }
@@ -2121,7 +2123,7 @@
                 liveVerificationOrderId = orderId;
                 document.getElementById("live-verification-overlay").style.display = "flex";
                 
-                // ⚡ PROFESSIONAL ENGINE: Active Polling (Instantly detects success without waiting for webhooks)
+                // ⚡ PROFESSIONAL ENGINE: Active Polling
                 if (verificationPolling) clearInterval(verificationPolling);
                 verificationPolling = setInterval(() => {
                     checkPaymentStatusLive(orderId);
@@ -2130,19 +2132,22 @@
 
             function cancelLiveVerification() {
                 if (liveVerificationOrderId) {
-                    db.ref("orders/" + liveVerificationOrderId).update({ status: "cancelled" });
+                    // SECURE CLEANUP: Completely deletes the abandoned order from the DB
+                    db.ref("orders/" + liveVerificationOrderId).remove();
                 }
                 liveVerificationOrderId = null;
                 if (verificationPolling) clearInterval(verificationPolling);
                 document.getElementById("live-verification-overlay").style.display = "none";
-                showToast("Payment session closed securely.", "info");
+                showToast("Payment Cancelled", "info");
+                
+                // Instantly re-render to clear it from the screen
+                if (document.getElementById("purchases-page").classList.contains("active")) renderPurchases();
             }
 
             async function checkPaymentStatusLive(orderId) {
-                if (!orderId) return;
+                if (!orderId || !auth.currentUser) return; // Wait for Firebase Auth to be ready
                 try {
                     const idToken = await auth.currentUser.getIdToken();
-                    // Calls your new Vercel endpoint to forcefully verify the transaction
                     const res = await fetch('https://nexustore-webhook.vercel.app/api/verify-order', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
@@ -2150,7 +2155,7 @@
                     });
                     const data = await res.json();
                     
-                    if (data.status === 'verified') {
+                    if (data.status === 'verified' || data.success === true) {
                         if (verificationPolling) clearInterval(verificationPolling);
                         
                         db.ref("orders/" + orderId).once("value").then(snap => {
@@ -2180,8 +2185,11 @@
                         const now = Date.now();
                         
                         Object.entries(snap.val() || {}).forEach(([oid, o]) => {
-                            // Instant cancel/expiration filter (Hides old abandoned orders after 15 mins)
-                            if ((o.status === "pending" || o.status === "cancelled") && (now - (o.createdAt || 0) > 15 * 60 * 1000)) return;
+                            // Instant expiration filter: Deletes abandoned orders over 15 mins old
+                            if (o.status === "pending" && (now - (o.createdAt || 0) > 15 * 60 * 1000)) {
+                                db.ref("orders/" + oid).remove(); // Keep database clean
+                                return;
+                            }
                             if (o.status === "cancelled") return;
 
                             const ex = next[o.productId];
@@ -2306,22 +2314,28 @@
                 
                 showToast("Securing payment link...", "info");
 
+                let orderId = null;
+                let orderRef = null;
+
                 // --- STRICT DUPLICATE PREVENTION ---
-                // Automatically cancels any abandoned/stuck orders for this exact product 
-                // so they disappear from the Admin Panel and User Panel immediately.
-                const existingOrders = await db.ref("orders").orderByChild("userId").equalTo(currentUser.id).once("value");
-                existingOrders.forEach(child => {
+                // Instead of creating a new order every time, we reuse the existing pending 
+                // order ID for this specific product to prevent Admin Dashboard bloat.
+                const existingOrdersSnap = await db.ref("orders").orderByChild("userId").equalTo(currentUser.id).once("value");
+                existingOrdersSnap.forEach(child => {
                     const o = child.val();
                     if (o.productId === currentPaymentData.appId && o.status === "pending") {
-                        db.ref("orders/" + child.key).update({ status: "cancelled" });
+                        orderId = child.key;
+                        orderRef = db.ref("orders/" + orderId);
                     }
                 });
 
-                // 1. Instantly create the NEW clean Order ticket
-                const ref = db.ref("orders").push();
-                const orderId = ref.key;
-                
-                await ref.set({
+                if (!orderId) {
+                    orderRef = db.ref("orders").push();
+                    orderId = orderRef.key;
+                }
+
+                // Create or Update the single unique order session
+                await orderRef.update({
                     userId: currentUser.id,
                     userEmail: currentUser.email,
                     userName: currentUser.name,
@@ -2330,7 +2344,7 @@
                     amount: currentPaymentData.amount,
                     status: "pending",
                     gatewayType: gateway,
-                    createdAt: Date.now(),
+                    createdAt: Date.now(), // Reset expiration timer
                 });
                 
                 document.getElementById("payment-order-id").innerText = orderId;
