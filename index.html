@@ -1770,7 +1770,7 @@
             // changes when the admin verifies it in admin.html.
             const urlParams = new URLSearchParams(window.location.search);
             const returnedFromPayment = urlParams.get("status") === "success";
-            const returnedProductId = urlParams.get("product") || urlParams.get("item");
+            const returnedOrderId = urlParams.get("orderId");
             let paymentReturnHandled = false;
             if (returnedFromPayment) {
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -1933,19 +1933,29 @@
 
                             if (returnedFromPayment && !paymentReturnHandled) {
                                 paymentReturnHandled = true;
-                                // Resume Live Verification if redirected back from Gateway
-                                db.ref("orders").orderByChild("userId").equalTo(user.uid).once("value").then(snap => {
-                                    let latestPending = null;
-                                    snap.forEach(child => {
-                                        const o = child.val();
-                                        if(o.status === "pending") {
-                                            if(!latestPending || o.createdAt > latestPending.createdAt) {
-                                                latestPending = { id: child.key, ...o };
-                                            }
+                                if (returnedOrderId) {
+                                    // Exact order round-trip from the gateway redirect - instant, no lookup needed.
+                                    db.ref("orders/" + returnedOrderId).once("value").then(s => {
+                                        const o = s.val();
+                                        if (o && o.userId === user.uid && (o.status === "pending" || o.status === "verified")) {
+                                            showLiveVerification(returnedOrderId);
                                         }
                                     });
-                                    if(latestPending) showLiveVerification(latestPending.id);
-                                });
+                                } else {
+                                    // Fallback for older payment links that didn't carry an orderId.
+                                    db.ref("orders").orderByChild("userId").equalTo(user.uid).once("value").then(snap => {
+                                        let latestPending = null;
+                                        snap.forEach(child => {
+                                            const o = child.val();
+                                            if(o.status === "pending") {
+                                                if(!latestPending || o.createdAt > latestPending.createdAt) {
+                                                    latestPending = { id: child.key, ...o };
+                                                }
+                                            }
+                                        });
+                                        if(latestPending) showLiveVerification(latestPending.id);
+                                    });
+                                }
                             }
 
                             attachOrdersListener(user.uid);
@@ -2254,14 +2264,14 @@
                 setTimeout(() => toggleModal("modal-payment", true), 300);
             }
 
-            function initiatePaymentFlow(gateway) {
+            async function initiatePaymentFlow(gateway) {
                 if (!currentPaymentData || !currentUser) return;
                 
                 // 1. Instantly create the Order ticket in Firebase
                 const ref = db.ref("orders").push();
                 const orderId = ref.key;
                 
-                ref.set({
+                await ref.set({
                     userId: currentUser.id,
                     userEmail: currentUser.email,
                     userName: currentUser.name,
@@ -2282,33 +2292,32 @@
                 // Ensure you replace this domain with your ACTUAL Vercel deployed domain!
                 const backendApiUrl = 'https://nexustore-webhook.vercel.app/api/create-order';
 
-                fetch(backendApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        gateway: gateway,
-                        orderId: orderId,
-                        amount: currentPaymentData.amount,
-                        customerEmail: currentUser.email,
-                        customerName: currentUser.name
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.paymentUrl) {
-                        // Success! Backend gave us a brand new, one-time link.
-                        window.open(data.paymentUrl, "_blank");
-                        showLiveVerification(orderId); // Switch to waiting overlay
-                    } else {
-                        showToast("Error generating link: " + (data.error || "Unknown error"), "error");
-                        db.ref("orders/" + orderId).update({ status: "cancelled" }); // Cleanup
-                    }
-                })
-                .catch(err => {
+                let data;
+                try {
+                    // The backend re-derives the real price from the product record using this
+                    // token - it never trusts an amount sent from the browser.
+                    const idToken = await auth.currentUser.getIdToken();
+                    const res = await fetch(backendApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+                        body: JSON.stringify({ gateway: gateway, orderId: orderId })
+                    });
+                    data = await res.json();
+                } catch (err) {
                     console.error("Backend Error:", err);
                     showToast("Payment Server is unreachable. Check your Vercel deployment.", "error");
                     db.ref("orders/" + orderId).update({ status: "cancelled" }); // Cleanup
-                });
+                    return;
+                }
+
+                if (data.paymentUrl) {
+                    // Success! Backend gave us a brand new, one-time link.
+                    window.open(data.paymentUrl, "_blank");
+                    showLiveVerification(orderId); // Switch to waiting overlay
+                } else {
+                    showToast("Error generating link: " + (data.error || "Unknown error"), "error");
+                    db.ref("orders/" + orderId).update({ status: "cancelled" }); // Cleanup
+                }
             }
             function closeSuccessOverlay() {
                 document.getElementById("payment-success-overlay").style.display = "none";
@@ -2668,7 +2677,7 @@
            
             
           
-            function handleDownload(app) {
+            async function handleDownload(app) {
                 if (!currentUser) {
                     toggleModal("modal-detail", false);
                     setTimeout(() => openAuth(), 300);
@@ -2679,34 +2688,30 @@
                 if (isPaidApp && (!order || order.status !== "verified")) {
                     return showToast("Purchase required before downloading this item", "error");
                 }
-                if (!isPaidApp) {
-                    // Free-tier daily cap only applies to apps with no price set.
-                    const today = new Date().toDateString();
-                    const last = new Date(currentUser.lastDownloadDate || 0).toDateString();
-                    let count = currentUser.dailyDownloads || 0;
-                    if (today !== last) count = 0;
-                    if (count >= globalDownloadLimit) return showToast("Daily Limit Reached", "error");
-                    db.ref("users/" + currentUser.id).update({ dailyDownloads: count + 1, lastDownloadDate: Date.now() });
-                }
-                
+
                 showToast("Generating Secure Link...", "info");
-                
-                // STRONG SECURITY: Fetch the actual URL directly from DB only upon authorized click.
-                db.ref("apps/" + app.id + "/downloadLink").once("value").then(snap => {
-                    const secureLink = snap.val();
-                    if (!secureLink) return showToast("Download link unavailable", "error");
-                    
-                    db.ref("apps/" + app.id + "/downloads").transaction((c) => (c || 0) + 1);
-                    db.ref("downloads_log").push({
-                        appName: app.title,
-                        userName: currentUser.name,
-                        userEmail: currentUser.email,
-                        timestamp: Date.now(),
+
+                // STRONG SECURITY: the real download URL never touches the client-readable
+                // database. The backend independently re-checks ownership/payment status (and
+                // the free-tier daily cap) with the Admin SDK before it will ever hand back the
+                // link, so it can't be read by anyone who hasn't paid - even from DevTools.
+                try {
+                    const idToken = await auth.currentUser.getIdToken();
+                    const res = await fetch('https://nexustore-webhook.vercel.app/api/get-download', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+                        body: JSON.stringify({ productId: app.id })
                     });
-                    
-                    window.open(secureLink, "_blank");
+                    const data = await res.json();
+                    if (!data.downloadUrl) {
+                        return showToast(data.error || "Download link unavailable", "error");
+                    }
+                    window.open(data.downloadUrl, "_blank");
                     showToast("Download Started!", "success");
-                });
+                } catch (err) {
+                    console.error("Download Error:", err);
+                    showToast("Download server unreachable. Try again.", "error");
+                }
             }
             function openWishlist() {
                 saveScroll();
