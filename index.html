@@ -1767,25 +1767,24 @@
             
             const urlParams = new URLSearchParams(window.location.search);
             const returnedFromPayment = urlParams.get("status") === "success";
-            // Checks multiple URL patterns depending on what TranzUPI sends back
             const returnedOrderId = urlParams.get("orderId") || urlParams.get("client_reference_id") || urlParams.get("product");
             let paymentReturnHandled = false;
 
             if (returnedFromPayment) {
+                // FORCE UI FREEZE: Instantly hide login screen and show verification overlay
+                document.getElementById("login-overlay").style.display = "none";
+                document.getElementById("admin-panel").style.display = "flex";
+                
+                const overlay = document.getElementById("live-verification-overlay");
+                overlay.style.display = "flex";
+                const h2 = overlay.querySelector("h2");
+                const p = overlay.querySelector("p");
+                const btn = overlay.querySelector(".btn-sec");
+                if (h2) h2.innerText = "Verifying Bank Payment...";
+                if (p) p.innerText = "Please wait securely while we confirm with the bank.";
+                if (btn) btn.style.display = "none"; 
+
                 window.history.replaceState({}, document.title, window.location.pathname);
-                // INSTANT UI FREEZE: Prevents the "Sign-in" screen from flashing during redirect
-                document.addEventListener("DOMContentLoaded", () => {
-                    const overlay = document.getElementById("live-verification-overlay");
-                    if (overlay) {
-                        overlay.style.display = "flex";
-                        const h2 = overlay.querySelector("h2");
-                        const p = overlay.querySelector("p");
-                        const btn = overlay.querySelector(".btn-sec");
-                        if (h2) h2.innerText = "Verifying Bank Payment...";
-                        if (p) p.innerText = "Please wait securely while we confirm with the bank.";
-                        if (btn) btn.style.display = "none"; // Hide cancel button to prevent accidental breaks
-                    }
-                });
             }
 
             let countdownInterval = null;
@@ -1897,6 +1896,9 @@
             db.ref("config/gateways").on("value", (s) => {
                 if (s.val()) activeGateways = s.val();
             });
+
+            // 🔴 IMPORTANT: IF YOUR VERCEL DOMAIN IS DIFFERENT, CHANGE IT HERE!
+            const VERCEL_API_URL = "https://nexustore-webhook.vercel.app";
 
             function getGuestSeed() {
                 let seed = localStorage.getItem("guest_seed");
@@ -2166,19 +2168,16 @@
                 if (!orderId || !auth.currentUser) return; 
                 try {
                     const idToken = await auth.currentUser.getIdToken();
-                    const res = await fetch('https://nexustore-webhook.vercel.app/api/verify-order', {
+                    
+                    const res = await fetch(`${VERCEL_API_URL}/api/verify-order`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
                         body: JSON.stringify({ orderId: orderId })
                     });
                     
-                    // 🛑 LIFESAVER FIX: If Vercel crashes, stop the infinite loading instantly and show the error!
                     if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        console.error("Vercel Backend Error:", errData);
-                        if (verificationPolling) clearInterval(verificationPolling);
-                        document.getElementById("live-verification-overlay").style.display = "none";
-                        showToast(`Backend Error: ${errData.error || res.statusText}`, "error");
+                        console.error("Vercel Backend returned an error.");
+                        // CRITICAL FIX: Do NOT stop polling. Keep trying in case the server wakes up.
                         return;
                     }
 
@@ -2201,10 +2200,8 @@
                         showToast("Payment expired or was rejected by bank.", "error");
                     }
                 } catch (e) {
-                    console.error("Live verification ping failed", e);
-                    if (verificationPolling) clearInterval(verificationPolling);
-                    document.getElementById("live-verification-overlay").style.display = "none";
-                    showToast("Network error. Could not connect to Vercel API.", "error");
+                    console.error("Network Fetch Error:", e);
+                    // CRITICAL FIX: Do NOT crash the screen. Firebase Webhook listener is still running as a backup!
                 }
             }
 
@@ -2239,11 +2236,12 @@
                                 };
                             }
 
-                            // ⚡ LIVE INTERCEPT TRIGGER (Webhook hit detected!)
-                            if (liveVerificationOrderId === oid && o.status === "verified") {
+                            // ⚡ INSTANT UNLOCK IF DATABASE CHANGES TO VERIFIED
+                            if (o.status === "verified" && liveVerificationOrderId === oid) {
+                                if (verificationPolling) clearInterval(verificationPolling);
                                 liveVerificationOrderId = null; 
                                 document.getElementById("live-verification-overlay").style.display = "none";
-                                if(ordersFirstLoad) celebrateUnlock(o.productId); // Fired if redirected back
+                                celebrateUnlock(o.productId); 
                             }
                         });
                         
@@ -2389,8 +2387,7 @@
                 // 2. Alert user and trigger the API call to Vercel
                 showToast("Generating secure payment link...", "info");
                 
-                // Ensure you replace this domain with your ACTUAL Vercel deployed domain!
-                const backendApiUrl = 'https://nexustore-webhook.vercel.app/api/create-order';
+                const backendApiUrl = `${VERCEL_API_URL}/api/create-order`;
 
                 let data;
                 try {
@@ -2797,7 +2794,7 @@
                 // link, so it can't be read by anyone who hasn't paid - even from DevTools.
                 try {
                     const idToken = await auth.currentUser.getIdToken();
-                    const res = await fetch('https://nexustore-webhook.vercel.app/api/get-download', {
+                    const res = await fetch(`${VERCEL_API_URL}/api/get-download`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
                         body: JSON.stringify({ productId: app.id })
