@@ -2115,10 +2115,17 @@
             let currentUserOrders = {}; 
             let ordersFirstLoad = true;
             let liveVerificationOrderId = null;
+            let verificationPolling = null;
 
             function showLiveVerification(orderId) {
                 liveVerificationOrderId = orderId;
                 document.getElementById("live-verification-overlay").style.display = "flex";
+                
+                // ⚡ PROFESSIONAL ENGINE: Active Polling (Instantly detects success without waiting for webhooks)
+                if (verificationPolling) clearInterval(verificationPolling);
+                verificationPolling = setInterval(() => {
+                    checkPaymentStatusLive(orderId);
+                }, 3000); // Pings securely every 3 seconds
             }
 
             function cancelLiveVerification() {
@@ -2126,8 +2133,38 @@
                     db.ref("orders/" + liveVerificationOrderId).update({ status: "cancelled" });
                 }
                 liveVerificationOrderId = null;
+                if (verificationPolling) clearInterval(verificationPolling);
                 document.getElementById("live-verification-overlay").style.display = "none";
-                showToast("Payment Cancelled", "info");
+                showToast("Payment session closed securely.", "info");
+            }
+
+            async function checkPaymentStatusLive(orderId) {
+                if (!orderId) return;
+                try {
+                    const idToken = await auth.currentUser.getIdToken();
+                    // Calls your new Vercel endpoint to forcefully verify the transaction
+                    const res = await fetch('https://nexustore-webhook.vercel.app/api/verify-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+                        body: JSON.stringify({ orderId: orderId })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.status === 'verified') {
+                        if (verificationPolling) clearInterval(verificationPolling);
+                        
+                        db.ref("orders/" + orderId).once("value").then(snap => {
+                            const o = snap.val();
+                            if (o && liveVerificationOrderId === orderId) {
+                                liveVerificationOrderId = null;
+                                document.getElementById("live-verification-overlay").style.display = "none";
+                                celebrateUnlock(o.productId);
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error("Live verification ping failed", e);
+                }
             }
 
             function attachOrdersListener(uid) {
@@ -2267,7 +2304,20 @@
             async function initiatePaymentFlow(gateway) {
                 if (!currentPaymentData || !currentUser) return;
                 
-                // 1. Instantly create the Order ticket in Firebase
+                showToast("Securing payment link...", "info");
+
+                // --- STRICT DUPLICATE PREVENTION ---
+                // Automatically cancels any abandoned/stuck orders for this exact product 
+                // so they disappear from the Admin Panel and User Panel immediately.
+                const existingOrders = await db.ref("orders").orderByChild("userId").equalTo(currentUser.id).once("value");
+                existingOrders.forEach(child => {
+                    const o = child.val();
+                    if (o.productId === currentPaymentData.appId && o.status === "pending") {
+                        db.ref("orders/" + child.key).update({ status: "cancelled" });
+                    }
+                });
+
+                // 1. Instantly create the NEW clean Order ticket
                 const ref = db.ref("orders").push();
                 const orderId = ref.key;
                 
