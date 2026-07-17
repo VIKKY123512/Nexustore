@@ -926,6 +926,71 @@
             .toast.info i {
                 color: #06b6d4;
             }
+            #global-alert-banner {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 9998;
+                background: rgba(15, 23, 42, 0.97);
+                backdrop-filter: blur(12px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                color: #fff;
+                padding: 12px 16px;
+                align-items: center;
+                gap: 12px;
+                box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+                animation: alertSlideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            #global-alert-banner.show {
+                display: flex;
+            }
+            #global-alert-banner i.fa-bullhorn {
+                font-size: 1.2rem;
+                color: var(--primary);
+                flex-shrink: 0;
+            }
+            #global-alert-banner .alert-body {
+                flex: 1;
+                min-width: 0;
+            }
+            #global-alert-banner .alert-title {
+                font-weight: 700;
+                font-size: 0.85rem;
+                margin-bottom: 2px;
+            }
+            #global-alert-banner .alert-msg {
+                font-size: 0.78rem;
+                color: var(--text-sub);
+                line-height: 1.4;
+            }
+            #global-alert-banner .alert-close {
+                flex-shrink: 0;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.08);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                color: #fff;
+                font-size: 0.75rem;
+            }
+            @keyframes alertSlideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-100%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            body.has-global-alert #main-header {
+                top: 68px;
+            }
             .clickable-header {
                 display: flex;
                 align-items: center;
@@ -1305,6 +1370,14 @@
     <body>
         <div id="canvas-container"></div>
         <div id="toast-container"></div>
+        <div id="global-alert-banner">
+            <i class="fas fa-bullhorn"></i>
+            <div class="alert-body">
+                <div class="alert-title" id="global-alert-title"></div>
+                <div class="alert-msg" id="global-alert-msg"></div>
+            </div>
+            <div class="alert-close" onclick="dismissGlobalAlert()"><i class="fas fa-times"></i></div>
+        </div>
         <div
             id="maint-screen"
             style="
@@ -1763,6 +1836,33 @@
                     screen.style.display = "none";
                 }
             });
+            // GLOBAL ALERT: this listener + banner element did not exist before, which is why
+            // "Broadcast" in the admin panel appeared to do nothing on the storefront.
+            db.ref("config/alert").on("value", (s) => {
+                const a = s.val();
+                const banner = document.getElementById("global-alert-banner");
+                if (!a || !a.title) {
+                    banner.classList.remove("show");
+                    document.body.classList.remove("has-global-alert");
+                    return;
+                }
+                const dismissedAt = parseInt(localStorage.getItem("dismissedAlertTs") || "0");
+                if (a.timestamp && a.timestamp <= dismissedAt) {
+                    banner.classList.remove("show");
+                    document.body.classList.remove("has-global-alert");
+                    return;
+                }
+                document.getElementById("global-alert-title").innerText = a.title;
+                document.getElementById("global-alert-msg").innerText = a.msg || "";
+                banner.classList.add("show");
+                document.body.classList.add("has-global-alert");
+                window.currentGlobalAlertTs = a.timestamp || Date.now();
+            });
+            function dismissGlobalAlert() {
+                localStorage.setItem("dismissedAlertTs", String(window.currentGlobalAlertTs || Date.now()));
+                document.getElementById("global-alert-banner").classList.remove("show");
+                document.body.classList.remove("has-global-alert");
+            }
             let scrollPos = {};
             let lastClickedId = null;
             
@@ -2532,11 +2632,15 @@
                 if (s.val()) {
                     const rawApps = s.val();
                     // STRONG SECURITY: Strip download links from global memory to prevent console scraping bypasses.
-                    allApps = Object.values(rawApps).map(app => {
-                        const safeApp = { ...app };
-                        delete safeApp.downloadLink; 
-                        return safeApp;
-                    });
+                    // Also hide anything the admin has marked Inactive - it should not be visible,
+                    // searchable, or downloadable by regular users.
+                    allApps = Object.values(rawApps)
+                        .filter((app) => app.active !== false)
+                        .map(app => {
+                            const safeApp = { ...app };
+                            delete safeApp.downloadLink; 
+                            return safeApp;
+                        });
                 }
             });
             db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));            
@@ -2546,7 +2650,7 @@
                 if (globalCats) {
                     const sorted = Object.entries(globalCats).sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
                     sorted.forEach(([k, c]) => {
-                        if ((c.parentId || null) === parentId) {
+                        if ((c.parentId || null) === parentId && c.active !== false) {
                             grid.innerHTML += ` <div class="sector-card" onclick="openCategory('${k}', '${c.name}')"><div class="sector-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="sector-info"><div class="sector-name">${c.name}</div></div></div>`;
                         }
                     });
@@ -2579,7 +2683,7 @@
                     let hasSubs = false;
                     const sortedSubs = Object.entries(globalCats).sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
                     sortedSubs.forEach(([k, c]) => {
-                        if (c.parentId === id) {
+                        if (c.parentId === id && c.active !== false) {
                             hasSubs = true;
                             grid.innerHTML += ` <div class="sector-card" onclick="openCategory('${k}', '${c.name}')"><div class="sector-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="sector-info"><div class="sector-name">${c.name}</div></div></div>`;
                         }
