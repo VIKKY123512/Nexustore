@@ -2246,6 +2246,15 @@
                                 db.ref("orders/" + oid).remove(); // Keep database clean
                                 return;
                             }
+
+                            // ⚡ INSTANT CLOSE OVERLAY IF ORDER RETRIEVES AS CANCELLED
+                            if (o.status === "cancelled" && liveVerificationOrderId === oid) {
+                                if (verificationPolling) clearInterval(verificationPolling);
+                                liveVerificationOrderId = null;
+                                document.getElementById("live-verification-overlay").style.display = "none";
+                                showToast("Payment was cancelled successfully", "info");
+                            }
+
                             if (o.status === "cancelled") return;
 
                             const ex = next[o.productId];
@@ -2299,13 +2308,25 @@
 
                 const overlay = document.getElementById("payment-success-overlay");
                 overlay.innerHTML = `
-                    <div class="success-circle"><i class="fas fa-check"></i></div>
-                    <h2 style="margin: 0 0 10px; font-weight: 800; font-size: 2rem; text-align: center;">Payment Verified 🎉</h2>
-                    <p style="margin: 0 0 20px; font-size: 1.1rem; opacity: 0.9; text-align: center;">${
-                        app ? escapeHtml(app.title) : "Your product"
-                    } is unlocked!</p>
-                    <div style="font-size:0.95rem; color:#fff; margin-bottom:25px; display:flex; align-items:center; gap:8px;"><i class="fas fa-spinner fa-spin"></i> Processing Download...</div>
-                    <button class="btn-main" style="background: white; color: #10b981; max-width: 250px;" onclick="handleDownloadById('${productId}')"><i class="fas fa-download"></i> Download Now</button>
+                    <div style="position: absolute; top: 30px; display: flex; align-items: center; gap: 8px; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; color: white;">
+                        <i class="fas fa-cube" style="color: #00f2fe; filter: drop-shadow(0 0 8px #00f2fe);"></i> NEXUSTORE
+                    </div>
+                    <div style="position: relative; margin-bottom: 25px;">
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 180px; height: 170px; background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, transparent 70%); animation: pulse-premium 2s infinite;"></div>
+                        <div class="success-circle" style="width: 110px; height: 110px; border: 4px solid #00e676; box-shadow: 0 0 30px rgba(0, 230, 118, 0.5); background: rgba(0,0,0,0.2); margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-check" style="color: #00e676; text-shadow: 0 0 10px rgba(0, 230, 118, 0.6); font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                    <h2 style="margin: 0 0 10px; font-weight: 900; font-size: 2.2rem; text-align: center; text-shadow: 0 0 20px rgba(0,230,118,0.3); letter-spacing: 0.5px;">Payment Verified!</h2>
+                    <p style="margin: 0 0 25px; font-size: 1.15rem; opacity: 0.95; font-weight: 500; text-align: center; letter-spacing: 0.2px; color: #cce7ff;">
+                        "${app ? escapeHtml(app.title) : "Your premium product"}" has been successfully unlocked.
+                    </p>
+                    <div style="font-size:0.95rem; color:#a7f3d0; margin-bottom:30px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight: 600;">
+                        <i class="fas fa-circle-notch fa-spin"></i> Instantly Unlocking Secure Download Link...
+                    </div>
+                    <button class="btn-main" style="background: white; color: #059669; max-width: 280px; font-weight: 800; font-size: 1.05rem; padding: 16px 40px; border-radius: 50px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); border: none; cursor: pointer; transition: 0.3s;" onclick="handleDownloadById('${productId}')">
+                        <i class="fas fa-cloud-download-alt"></i> Access Download Now
+                    </button>
                 `;
                 overlay.style.display = "flex";
 
@@ -2318,7 +2339,7 @@
 
                 setTimeout(() => {
                     if (overlay.style.display !== "none") closeSuccessOverlay();
-                }, 6000);
+                }, 8000);
             }
 
            function initPayment(appId, appTitle, price) {
