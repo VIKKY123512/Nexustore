@@ -1595,11 +1595,11 @@
                 >
                     <i class="fas fa-users"></i> Join Community
                 </button>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0">
-                    <button class="btn-sec" onclick="openPage('about')">About</button>
-                    <button class="btn-sec" onclick="openPage('privacy')">Privacy</button>
-                    <button class="btn-sec" onclick="openPage('terms')">Terms</button>
-                    <button class="btn-sec" onclick="openPage('refund')">Refund</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin: 20px 0">
+                    <button class="btn-sec" style="padding: 10px 4px; font-size: 0.85rem;" onclick="openPage('about')">About</button
+                    ><button class="btn-sec" style="padding: 10px 4px; font-size: 0.85rem;" onclick="openPage('privacy')">Privacy</button
+                    ><button class="btn-sec" style="padding: 10px 4px; font-size: 0.85rem;" onclick="openPage('terms')">Terms</button
+                    ><button class="btn-sec" style="padding: 10px 4px; font-size: 0.85rem;" onclick="openPage('refund')">Refund</button>
                 </div>
                 <div
                     id="social-container"
@@ -1679,40 +1679,29 @@
         </div>
 
         <!-- Live Payment Verification Overlay -->
-        <div id="live-verification-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle at center, rgba(0, 31, 63, 0.98) 0%, rgba(0, 10, 25, 0.99) 100%); z-index:99999; flex-direction:column; align-items:center; justify-content:center; color:white; backdrop-filter:blur(25px); -webkit-backdrop-filter:blur(25px); animation: fadeIn 0.4s ease;">
-            <div style="position: relative; width: 140px; height: 140px; margin-bottom: 30px; display: flex; align-items: center; justify-content: center;">
-                <div style="position: absolute; width: 100%; height: 100%; border: 3px dashed rgba(0, 242, 254, 0.3); border-radius: 50%; animation: spin 8s linear infinite;"></div>
-                <div style="position: absolute; width: 85%; height: 85%; border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 50%; animation: spin 4s reverse linear infinite;"></div>
-                <div class="cube-loader" style="transform:scale(0.4); margin: 0; z-index: 10;">
-                    <div class="box box0"><div></div></div>
-                    <div class="box box1"><div></div></div>
-                    <div class="box box2"><div></div></div>
-                    <div class="box box3"><div></div></div>
-                    <div class="box box4"><div></div></div>
-                    <div class="box box5"><div></div></div>
-                    <div class="box box6"><div></div></div>
-                    <div class="box box7"><div></div></div>
-                    <div class="ground"><div></div></div>
-                </div>
+        <div id="live-verification-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,31,63,0.95); z-index:99999; flex-direction:column; align-items:center; justify-content:center; color:white; backdrop-filter:blur(15px);">
+            <div class="cube-loader" style="transform:scale(0.6); margin-bottom: 30px;">
+                <div class="box box0"><div></div></div>
+                <div class="box box1"><div></div></div>
+                <div class="box box2"><div></div></div>
+                <div class="box box3"><div></div></div>
+                <div class="box box4"><div></div></div>
+                <div class="box box5"><div></div></div>
+                <div class="box box6"><div></div></div>
+                <div class="box box7"><div></div></div>
+                <div class="ground"><div></div></div>
             </div>
-            <h2 style="font-weight:900; font-size:1.8rem; margin:0 0 10px; color:#fff; text-shadow: 0 0 15px rgba(0, 242, 254, 0.4); letter-spacing: 0.5px;">SECURE PAYMENT IN PROCESS</h2>
-            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); padding: 6px 16px; border-radius: 30px; margin-bottom: 20px;">
-                <span style="width: 8px; height: 8px; background: #00e676; border-radius: 50%; display: inline-block; animation: pulse-premium 1s infinite alternate;"></span>
-                <span style="font-size: 0.8rem; font-weight: 700; color: #00e676; text-transform: uppercase; letter-spacing: 1px;">Awaiting UPI Confirmation</span>
-            </div>
-            <p style="color:var(--text-sub); margin:0 0 35px; text-align:center; max-width:80%; line-height:1.6; font-size: 0.95rem;">Please complete the UPI transfer in your app.<br><span style="color: #00f2fe; font-weight: 600;">Do not close this page.</span> It will automatically verify and unlock.</p>
-            <button class="btn-sec" style="width:auto; padding:12px 35px; font-weight:700; border-radius: 50px; background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.15); color: #ff1744;" onclick="cancelLiveVerification()"><i class="fas fa-times-circle" style="margin-right: 8px;"></i> Cancel Payment</button>
+            <h2 style="font-weight:800; font-size:1.8rem; margin:0 0 10px; color:#fff;">Awaiting Payment...</h2>
+            <p style="color:var(--text-sub); margin:0 0 30px; text-align:center; max-width:80%; line-height:1.5;">Please complete the payment in the opened tab.<br>This screen will auto-verify instantly.</p>
+            <button class="btn-sec" style="width:auto; padding:10px 30px; font-weight:700;" onclick="cancelLiveVerification()">Cancel Payment</button>
         </div>
 
         <!-- Payment Success Overlay -->
-        <div id="payment-success-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle at center, #0d5c3a 0%, #031c10 100%); z-index:30000; flex-direction:column; align-items:center; justify-content:center; color:white; animation: slideUpSuccess 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
-            <div style="position: relative; margin-bottom: 25px;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 170px; height: 170px; background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, transparent 70%); animation: pulse-premium 2s infinite;"></div>
-                <div class="success-circle" style="width: 110px; height: 110px; border: 4px solid #00e676; box-shadow: 0 0 30px rgba(0, 230, 118, 0.5); background: rgba(0,0,0,0.2);"><i class="fas fa-check" style="color: #00e676; text-shadow: 0 0 10px rgba(0, 230, 118, 0.6);"></i></div>
-            </div>
-            <h2 style="margin: 0 0 8px; font-weight: 900; font-size: 2.2rem; text-shadow: 0 0 20px rgba(0,230,118,0.3); letter-spacing: 0.5px;">Payment Verified!</h2>
-            <p style="margin: 0 0 30px; font-size: 1.15rem; opacity: 0.95; font-weight: 500; letter-spacing: 0.2px;">Thank you! Your secure transaction is complete.</p>
-            <button class="btn-main" style="background: white; color: #10b981; max-width: 250px; font-weight: 800; font-size: 1.05rem; padding: 16px 40px; border-radius: 50px; box-shadow: 0 15px 30px rgba(0,0,0,0.3);" onclick="closeSuccessOverlay()"><i class="fas fa-cloud-download-alt" style="margin-right: 8px;"></i> Access Downloads</button>
+        <div id="payment-success-overlay">
+            <div class="success-circle"><i class="fas fa-check"></i></div>
+            <h2 style="margin: 0 0 10px; font-weight: 800; font-size: 2rem;">Payment Successful</h2>
+            <p style="margin: 0 0 30px; font-size: 1.1rem; opacity: 0.9;">You are now a VIP Member!</p>
+            <button class="btn-main" style="background: white; color: #10b981; max-width: 200px;" onclick="closeSuccessOverlay()">Continue</button>
         </div>
 
         <!-- Payment Modal -->
@@ -1903,6 +1892,7 @@
             let allApps = [];
             let globalCats = {};
             let msgListener = null;
+            let msgQueryRef = null;
             let activeGateways = { tranzupi: true, spacepay: false }; // Default state
             
             db.ref("config/gateways").on("value", (s) => {
@@ -1987,13 +1977,9 @@
 
                             attachOrdersListener(user.uid);
 
-                            if (msgListener) db.ref("messages").off("child_changed", msgListener);
-                            msgListener = db
-                                .ref("messages")
-                                .orderByChild("user")
-                                .equalTo(user.uid)
-                                .limitToLast(1)
-                                .on("child_changed", (s) => {
+                            if (msgQueryRef && msgListener) msgQueryRef.off("child_changed", msgListener);
+                            msgQueryRef = db.ref("messages").orderByChild("user").equalTo(user.uid).limitToLast(1);
+                            msgListener = msgQueryRef.on("child_changed", (s) => {
                                     const m = s.val();
                                     if (m.reply && Date.now() - (m.replyTime || 0) < 10000)
                                         showToast("New Support Reply", "success");
@@ -2001,9 +1987,10 @@
                         });
                 } else {
                     currentUser = null;
-                    if (ordersListener) {
-                        db.ref("orders").off("value", ordersListener);
+                    if (ordersQueryRef && ordersListener) {
+                        ordersQueryRef.off("value", ordersListener);
                         ordersListener = null;
+                        ordersQueryRef = null;
                     }
                     currentUserOrders = {};
                     syncUserUI();
@@ -2150,6 +2137,7 @@
             // ============ PAYMENT SYSTEM (TRANZUPI REAL-TIME) ============
             let currentPaymentData = null;
             let ordersListener = null;
+            let ordersQueryRef = null;
             let currentUserOrders = {}; 
             let ordersFirstLoad = true;
             let liveVerificationOrderId = null;
@@ -2229,13 +2217,10 @@
             }
 
             function attachOrdersListener(uid) {
-                if (ordersListener) db.ref("orders").off("value", ordersListener);
+                if (ordersQueryRef && ordersListener) ordersQueryRef.off("value", ordersListener);
                 ordersFirstLoad = true;
-                ordersListener = db
-                    .ref("orders")
-                    .orderByChild("userId")
-                    .equalTo(uid)
-                    .on("value", (snap) => {
+                ordersQueryRef = db.ref("orders").orderByChild("userId").equalTo(uid);
+                ordersListener = ordersQueryRef.on("value", (snap) => {
                         const previous = currentUserOrders;
                         const next = {};
                         const now = Date.now();
@@ -2246,15 +2231,6 @@
                                 db.ref("orders/" + oid).remove(); // Keep database clean
                                 return;
                             }
-
-                            // ⚡ INSTANT CLOSE OVERLAY IF ORDER RETRIEVES AS CANCELLED
-                            if (o.status === "cancelled" && liveVerificationOrderId === oid) {
-                                if (verificationPolling) clearInterval(verificationPolling);
-                                liveVerificationOrderId = null;
-                                document.getElementById("live-verification-overlay").style.display = "none";
-                                showToast("Payment was cancelled successfully", "info");
-                            }
-
                             if (o.status === "cancelled") return;
 
                             const ex = next[o.productId];
@@ -2282,8 +2258,7 @@
                         if (!ordersFirstLoad) {
                             Object.entries(next).forEach(([productId, order]) => {
                                 const was = previous[productId];
-                                // Fix: Only celebrate the transition from pending to verified within the current active session
-                                if (order.status === "verified" && was && was.status === "pending") {
+                                if (order.status === "verified" && (!was || was.status !== "verified")) {
                                     celebrateUnlock(productId);
                                 }
                             });
@@ -2308,25 +2283,13 @@
 
                 const overlay = document.getElementById("payment-success-overlay");
                 overlay.innerHTML = `
-                    <div style="position: absolute; top: 30px; display: flex; align-items: center; gap: 8px; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; color: white;">
-                        <i class="fas fa-cube" style="color: #00f2fe; filter: drop-shadow(0 0 8px #00f2fe);"></i> NEXUSTORE
-                    </div>
-                    <div style="position: relative; margin-bottom: 25px;">
-                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 180px; height: 170px; background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, transparent 70%); animation: pulse-premium 2s infinite;"></div>
-                        <div class="success-circle" style="width: 110px; height: 110px; border: 4px solid #00e676; box-shadow: 0 0 30px rgba(0, 230, 118, 0.5); background: rgba(0,0,0,0.2); margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-check" style="color: #00e676; text-shadow: 0 0 10px rgba(0, 230, 118, 0.6); font-size: 3rem;"></i>
-                        </div>
-                    </div>
-                    <h2 style="margin: 0 0 10px; font-weight: 900; font-size: 2.2rem; text-align: center; text-shadow: 0 0 20px rgba(0,230,118,0.3); letter-spacing: 0.5px;">Payment Verified!</h2>
-                    <p style="margin: 0 0 25px; font-size: 1.15rem; opacity: 0.95; font-weight: 500; text-align: center; letter-spacing: 0.2px; color: #cce7ff;">
-                        "${app ? escapeHtml(app.title) : "Your premium product"}" has been successfully unlocked.
-                    </p>
-                    <div style="font-size:0.95rem; color:#a7f3d0; margin-bottom:30px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight: 600;">
-                        <i class="fas fa-circle-notch fa-spin"></i> Instantly Unlocking Secure Download Link...
-                    </div>
-                    <button class="btn-main" style="background: white; color: #059669; max-width: 280px; font-weight: 800; font-size: 1.05rem; padding: 16px 40px; border-radius: 50px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); border: none; cursor: pointer; transition: 0.3s;" onclick="handleDownloadById('${productId}')">
-                        <i class="fas fa-cloud-download-alt"></i> Access Download Now
-                    </button>
+                    <div class="success-circle"><i class="fas fa-check"></i></div>
+                    <h2 style="margin: 0 0 10px; font-weight: 800; font-size: 2rem; text-align: center;">Payment Verified 🎉</h2>
+                    <p style="margin: 0 0 20px; font-size: 1.1rem; opacity: 0.9; text-align: center;">${
+                        app ? escapeHtml(app.title) : "Your product"
+                    } is unlocked!</p>
+                    <div style="font-size:0.95rem; color:#fff; margin-bottom:25px; display:flex; align-items:center; gap:8px;"><i class="fas fa-spinner fa-spin"></i> Processing Download...</div>
+                    <button class="btn-main" style="background: white; color: #10b981; max-width: 250px;" onclick="handleDownloadById('${productId}')"><i class="fas fa-download"></i> Download Now</button>
                 `;
                 overlay.style.display = "flex";
 
@@ -2339,7 +2302,7 @@
 
                 setTimeout(() => {
                     if (overlay.style.display !== "none") closeSuccessOverlay();
-                }, 8000);
+                }, 6000);
             }
 
            function initPayment(appId, appTitle, price) {
@@ -2923,17 +2886,11 @@
                             });
                             msgs.sort((a, b) => a.time - b.time);
                             msgs.forEach((msg) => {
-                                if (msg.type === "admin") {
-                                    div.innerHTML += `
-                                        <div class="chat-bubble chat-admin" style="display: flex; flex-direction: column;">
-                                            <div style="font-size: 0.75rem; color: #00f2fe; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-                                                Support Admin <img src="bluetick.png" style="width: 12px; height: 12px; vertical-align: middle;" alt="Verified">
-                                            </div>
-                                            <div>${msg.text}</div>
-                                        </div>`;
-                                } else {
-                                    div.innerHTML += `<div class="chat-bubble chat-user">${msg.text}</div>`;
-                                }
+                                const adminBadge =
+                                    msg.type === "admin"
+                                        ? '<img src="bluetick.png" style="width:14px; height:14px; vertical-align:middle; margin-right:4px;" alt="Verified Admin">'
+                                        : "";
+                                div.innerHTML += `<div class="chat-bubble chat-${msg.type}">${adminBadge}${msg.text}</div>`;
                             });
                             div.scrollTop = div.scrollHeight;
                         }
@@ -2993,7 +2950,7 @@
             }, 350);
             function openPage(type) {
                 db.ref("site_settings/pages/" + type).once("value", (s) => {
-                    document.getElementById("info-title").innerText = type === "refund" ? "REFUND POLICY" : type.toUpperCase();
+                    document.getElementById("info-title").innerText = type.toUpperCase();
                     document.getElementById("info-body").innerText = s.val() || "No content";
                     toggleModal("modal-info", true);
                 });
