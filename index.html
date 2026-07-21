@@ -156,6 +156,8 @@
                 padding-top: 90px; /* Pushes content down so fixed header doesn't overlap it */
                 padding-bottom: 120px;
                 scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
             }
             #mobile-viewport::-webkit-scrollbar {
                 width: 0px;
@@ -360,7 +362,8 @@
                 display: flex;
                 flex-direction: column;
                 box-shadow: var(--shadow-card);
-                transition: all 0.3s ease;
+                transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+                animation: smoothSlideIn 0.45s cubic-bezier(0.2, 0, 0, 1) backwards;
             }
             .sector-card:active {
                 transform: scale(0.96);
@@ -410,6 +413,15 @@
                 grid-template-columns: repeat(2, 1fr);
                 gap: 15px;
             }
+            /* Cascading reveal - each successive card/sector in a grid animates in slightly
+               after the last one, capped so long lists don't leave a delayed tail. */
+            .grid > *:nth-child(1), .sector-grid > *:nth-child(1) { animation-delay: 0.02s; }
+            .grid > *:nth-child(2), .sector-grid > *:nth-child(2) { animation-delay: 0.06s; }
+            .grid > *:nth-child(3), .sector-grid > *:nth-child(3) { animation-delay: 0.1s; }
+            .grid > *:nth-child(4), .sector-grid > *:nth-child(4) { animation-delay: 0.14s; }
+            .grid > *:nth-child(5), .sector-grid > *:nth-child(5) { animation-delay: 0.18s; }
+            .grid > *:nth-child(6), .sector-grid > *:nth-child(6) { animation-delay: 0.22s; }
+            .grid > *:nth-child(n+7), .sector-grid > *:nth-child(n+7) { animation-delay: 0.26s; }
             .card {
                 background: var(--card-bg);
                 border: 1px solid var(--glass-border);
@@ -423,8 +435,8 @@
                 flex-direction: column;
                 align-items: center;
                 text-align: center;
-                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                animation: smoothSlideIn 0.5s ease;
+                transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+                animation: smoothSlideIn 0.45s cubic-bezier(0.2, 0, 0, 1) backwards;
             }
             .skeleton-layer {
                 position: absolute;
@@ -444,6 +456,81 @@
             }
             .skel-img.loaded {
                 opacity: 1; /* Appears instantly when loaded */
+            }
+            .price-row {
+                display: flex;
+                align-items: baseline;
+                justify-content: center;
+                gap: 6px;
+                margin-top: 4px;
+                flex-wrap: wrap;
+            }
+            .price-row .price-final {
+                font-weight: 800;
+                font-size: 0.95rem;
+                color: #10b981;
+            }
+            .price-row .price-original {
+                font-size: 0.75rem;
+                color: var(--text-sub);
+                text-decoration: line-through;
+                opacity: 0.75;
+            }
+            .price-row .price-pct {
+                font-size: 0.65rem;
+                font-weight: 800;
+                color: #fff;
+                background: linear-gradient(135deg, #f43f5e, #fb923c);
+                padding: 1px 7px;
+                border-radius: 999px;
+            }
+            .discount-ribbon {
+                position: absolute;
+                top: 10px;
+                left: -6px;
+                z-index: 5;
+                background: linear-gradient(135deg, #f43f5e, #fb923c);
+                color: #fff;
+                font-size: 0.65rem;
+                font-weight: 800;
+                padding: 3px 10px 3px 12px;
+                border-radius: 0 6px 6px 0;
+                box-shadow: 0 3px 10px rgba(244, 63, 94, 0.4);
+                letter-spacing: 0.3px;
+            }
+            .discount-ribbon::after {
+                content: "";
+                position: absolute;
+                left: 0;
+                bottom: -5px;
+                border-width: 5px 6px 0 0;
+                border-style: solid;
+                border-color: #b91c3c transparent transparent transparent;
+            }
+            .price-strip {
+                display: flex;
+                align-items: baseline;
+                gap: 10px;
+                margin: 6px 0 2px;
+            }
+            .price-strip .price-final-lg {
+                font-size: 1.6rem;
+                font-weight: 800;
+                color: #10b981;
+            }
+            .price-strip .price-original-lg {
+                font-size: 1rem;
+                color: var(--text-sub);
+                text-decoration: line-through;
+                opacity: 0.7;
+            }
+            .price-strip .price-pct-lg {
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: #fff;
+                background: linear-gradient(135deg, #f43f5e, #fb923c);
+                padding: 3px 10px;
+                border-radius: 999px;
             }
             .banner-container {
                 width: 100%;
@@ -827,19 +914,25 @@
             }
             .page-view.active {
                 display: block;
-                animation: fadeView 0.3s;
+                animation: fadeView 0.36s cubic-bezier(0.2, 0, 0, 1);
+                will-change: transform, opacity;
             }
             @keyframes fadeView {
                 from {
                     opacity: 0;
-                    transform: translateY(20px);
-                }
-                50% {
-                    transform: translateY(-5px);
+                    transform: translateY(14px) scale(0.99);
                 }
                 to {
                     opacity: 1;
-                    transform: translateY(0);
+                    transform: translateY(0) scale(1);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                *, *::before, *::after {
+                    animation-duration: 0.001ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.001ms !important;
+                    scroll-behavior: auto !important;
                 }
             }
 
@@ -1624,6 +1717,7 @@
                     style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px"
                 ></div>
                 
+                <div id="detail-price-strip" class="price-strip" style="display: none; justify-content: center;"></div>
                 <button id="btn-dl" class="btn-main" style="transition: all 0.3s ease;"><i class="fas fa-download"></i> DOWNLOAD</button>
                 <button id="btn-extra" class="btn-sec" style="display: none">Tutorial</button>
             </div>
@@ -1990,6 +2084,36 @@
             let currentUser = null;
             let globalDownloadLimit = 5;
             let allApps = [];
+            /* ================= DISCOUNT PRICING ================= */
+            // Returns {original, price, pct} for a paid app, or null if it shouldn't show a discount.
+            // If the admin never set an original price, we deterministically derive one from the
+            // app's own id/price (same result every time for the same app - not a jittery re-roll
+            // on every render) so paid products always look complete even before the admin visits them.
+            function getDiscountInfo(app) {
+                if (!app || !app.price || app.price <= 0) return null;
+                if (app.discountEnabled === false) return null;
+                let original = app.originalPrice && app.originalPrice > app.price ? app.originalPrice : 0;
+                if (!original) {
+                    const str = String(app.id || app.title || "x");
+                    let seed = 0;
+                    for (let i = 0; i < str.length; i++) seed = (seed * 31 + str.charCodeAt(i)) >>> 0;
+                    const rand = (seed % 1000) / 1000;
+                    const markup = 1.25 + rand * 0.55; // 25%-80%
+                    original = Math.round((app.price * markup) / 10) * 10 - 1;
+                    if (original <= app.price) original = app.price + 50;
+                }
+                const pct = Math.round(((original - app.price) / original) * 100);
+                if (pct < 5) return null; // not worth showing
+                return { original, price: app.price, pct };
+            }
+            function priceRowHtml(app) {
+                if (!app.price || app.price <= 0) return "";
+                const d = getDiscountInfo(app);
+                if (d) {
+                    return `<div class="price-row"><span class="price-final">₹${d.price}</span><span class="price-original">₹${d.original}</span><span class="price-pct">${d.pct}% OFF</span></div>`;
+                }
+                return `<div class="price-row"><span class="price-final">₹${app.price}</span></div>`;
+            }
             let globalCats = {};
             let msgListener = null;
             let msgQueryRef = null;
@@ -2649,9 +2773,14 @@
                 grid.innerHTML = "";
                 if (globalCats) {
                     const sorted = Object.entries(globalCats).sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
+                    let idx = 0;
                     sorted.forEach(([k, c]) => {
                         if ((c.parentId || null) === parentId && c.active !== false) {
-                            grid.innerHTML += ` <div class="sector-card" onclick="openCategory('${k}', '${c.name}')"><div class="sector-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="sector-info"><div class="sector-name">${c.name}</div></div></div>`;
+                            // First 4 sector images are almost certainly above the fold, so we load
+                            // them eagerly with high priority; everything else stays lazy.
+                            const eager = idx < 4;
+                            idx++;
+                            grid.innerHTML += ` <div class="sector-card" onclick="openCategory('${k}', '${c.name}')"><div class="sector-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" loading="${eager ? "eager" : "lazy"}" ${eager ? 'fetchpriority="high"' : ''} decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="sector-info"><div class="sector-name">${c.name}</div></div></div>`;
                         }
                     });
                 }
@@ -2703,7 +2832,7 @@
                             const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
                                 ? `<div style="position:absolute; top:10px; right:45px; z-index:5;"><img src="bluetick.png" style="width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));"></div>` : '';
                             const tagsHtml = getTagsHtml(app);
-                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"> ${badge} ${ownedHtml} <div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div> ${tagsHtml} <h3 style="margin-top:10px;">${app.title}</h3><p>${app.category}</p></div>`;
+                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"> ${badge} ${ownedHtml} <div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div>${getDiscountInfo(app) ? `<div class="discount-ribbon">${getDiscountInfo(app).pct}% OFF</div>` : ""}<div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div> ${tagsHtml} <h3 style="margin-top:10px;">${app.title}</h3><p>${app.category}</p>${priceRowHtml(app)}</div>`;
                         });
                         if (apps.length === 0)
                             grid.innerHTML =
@@ -2726,7 +2855,7 @@
                         grid.innerHTML = "";
                         const hits = allApps.filter((a) => a.title.toLowerCase().includes(val));
                         hits.forEach((app) => {
-                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3><p>${app.category}</p></div>`;
+                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div>${getDiscountInfo(app) ? `<div class="discount-ribbon">${getDiscountInfo(app).pct}% OFF</div>` : ""}<div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3><p>${app.category}</p>${priceRowHtml(app)}</div>`;
                         });
                         if (hits.length === 0)
                             grid.innerHTML = '<p style="text-align:center; width:100%;">No results</p>';
@@ -2816,6 +2945,8 @@
                 const manageHeader = document.getElementById("manage-product-header");
                 const dlBtn = document.getElementById("btn-dl");
                 dlBtn.style.animation = "none";
+                const priceStripElTop = document.getElementById("detail-price-strip");
+                if (priceStripElTop) priceStripElTop.style.display = "none";
 
                 if (app.locked) {
                     salesBoosters.style.display = "none";
@@ -2859,7 +2990,16 @@
                     salesBoosters.style.display = "block";
                     manageHeader.style.display = "none";
                     startCountdown();
-                    
+
+                    const d = getDiscountInfo(app);
+                    const priceStripEl = document.getElementById("detail-price-strip");
+                    if (priceStripEl) {
+                        priceStripEl.innerHTML = d
+                            ? `<span class="price-final-lg">₹${d.price}</span><span class="price-original-lg">₹${d.original}</span><span class="price-pct-lg">${d.pct}% OFF</span>`
+                            : `<span class="price-final-lg">₹${app.price}</span>`;
+                        priceStripEl.style.display = "flex";
+                    }
+
                     dlBtn.style.display = "block";
                     dlBtn.innerHTML = `<i class="fas fa-bolt"></i> BUY NOW FOR ₹${app.price}`;
                     dlBtn.style.background = "var(--premium-gradient)";
@@ -2869,6 +3009,8 @@
                     // Free app
                     salesBoosters.style.display = "none";
                     manageHeader.style.display = "none";
+                    const priceStripEl = document.getElementById("detail-price-strip");
+                    if (priceStripEl) priceStripEl.style.display = "none";
                     dlBtn.style.display = "block";
                     dlBtn.innerHTML = '<i class="fas fa-download"></i> DOWNLOAD FREE';
                     dlBtn.style.background = "var(--accent-gradient)";
@@ -2932,7 +3074,7 @@
                 if (currentUser && currentUser.wishlist) {
                     const list = allApps.filter((a) => currentUser.wishlist.includes(a.id));
                     list.forEach((app) => {
-                        grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon active" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3></div>`;
+                        grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon active" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div>${getDiscountInfo(app) ? `<div class="discount-ribbon">${getDiscountInfo(app).pct}% OFF</div>` : ""}<div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3>${priceRowHtml(app)}</div>`;
                     });
                 } else {
                     grid.innerHTML = '<p style="text-align:center; color:var(--text-sub);">Empty</p>';
