@@ -13,12 +13,6 @@
         <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
         <link rel="dns-prefetch" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
-        <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
-        <link rel="dns-prefetch" href="https://rexgamerzstore-ca413.firebasestorage.app">
-        <link rel="preconnect" href="https://rexgamerzstore-ca413.firebasestorage.app" crossorigin>
-        <link rel="dns-prefetch" href="https://firebaseio.com">
-        <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
         
         <meta property="og:title" content="NexusStore - Premium Digital Products & Modded Apps" />
         <meta property="og:description" content="Premium digital products, modded apps, and pro tools. Browse, buy, and download instantly." />
@@ -125,14 +119,6 @@
             .price-now { font-weight: 800; font-size: 0.95rem; color: var(--primary, #4361ee); }
             .price-was { font-size: 0.75rem; color: var(--text-sub, #94a3b8); text-decoration: line-through; }
             .price-off { font-size: 0.65rem; font-weight: 800; color: #16a34a; background: #dcfce7; padding: 2px 6px; border-radius: 5px; }
-            /* Momentum + smooth scroll for every horizontally-scrolling strip (chips, sector
-               rows, etc.) so swiping feels native/fluid instead of stepping. */
-            .chat-ai-chips, [style*="overflow-x: auto"], [style*="overflow-x:auto"] {
-                scroll-behavior: smooth;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-            }
-            .chat-ai-chips::-webkit-scrollbar { display: none; }
             .ptag-free { background: #00e676; color: #000; box-shadow: 0 0 10px rgba(0, 230, 118, 0.4); }
             .ptag-paid { background: #f59e0b; color: #fff; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
             .ptag-premium { background: var(--premium-gradient); color: #fff; box-shadow: 0 0 15px rgba(168, 85, 247, 0.6); }
@@ -379,16 +365,6 @@
                 flex-direction: column;
                 box-shadow: var(--shadow-card);
                 transition: all 0.3s ease;
-                content-visibility: auto;
-                contain-intrinsic-size: 180px;
-                animation: cardEnter 0.35s ease-out both;
-            }
-            @media (prefers-reduced-motion: reduce) {
-                .card, .sector-card, .page-view.active, * {
-                    animation-duration: 0.001ms !important;
-                    animation-iteration-count: 1 !important;
-                    transition-duration: 0.001ms !important;
-                }
             }
             .sector-card:active {
                 transform: scale(0.96);
@@ -438,10 +414,6 @@
                 grid-template-columns: repeat(2, 1fr);
                 gap: 15px;
             }
-            @keyframes cardEnter {
-                from { opacity: 0; transform: translateY(10px) scale(0.98); }
-                to { opacity: 1; transform: translateY(0) scale(1); }
-            }
             .card {
                 background: var(--card-bg);
                 border: 1px solid var(--glass-border);
@@ -451,13 +423,6 @@
                 cursor: pointer;
                 position: relative; /* Fixed: Removed sticky so it doesn't break Purchases page */
                 overflow: hidden;
-                content-visibility: auto; /* Skip layout/paint cost for cards scrolled off-screen */
-                contain-intrinsic-size: 240px; /* Reserves space so scrollbars/scroll position don't jump */
-                will-change: transform, opacity;
-                backface-visibility: hidden; /* Forces GPU compositing, smooths scroll on mobile */
-                animation: cardEnter 0.35s ease-out both; /* Plays on mount, and again as content-visibility
-                    brings each card into render when it scrolls into view - a free, cheap "material"
-                    scroll-reveal effect with no JS/IntersectionObserver overhead */
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -867,22 +832,6 @@
             .page-view.active {
                 display: block;
                 animation: fadeView 0.3s;
-            }
-            /* Smooth cross-fade + slight scale for browsers that support the View
-               Transitions API (used by navTo). Falls back silently everywhere else. */
-            ::view-transition-old(root) {
-                animation: 180ms ease-out both viewFadeOut;
-            }
-            ::view-transition-new(root) {
-                animation: 220ms ease-in both viewFadeIn;
-            }
-            @keyframes viewFadeOut {
-                from { opacity: 1; transform: scale(1); }
-                to { opacity: 0; transform: scale(0.99); }
-            }
-            @keyframes viewFadeIn {
-                from { opacity: 0; transform: scale(1.01); }
-                to { opacity: 1; transform: scale(1); }
             }
             @keyframes fadeView {
                 from {
@@ -2645,33 +2594,21 @@
             }
             function handleAuthAction() {}
             function navTo(page, skipHistory = false) {
-                const doSwitch = () => {
-                    document.querySelectorAll(".page-view").forEach((p) => p.classList.remove("active"));
-                    document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
-
-                    if (page === "home") {
-                        document.getElementById("nav-home").classList.add("active");
-                        document.getElementById("home-page").classList.add("active");
-                        restoreScroll("home-page");
-                    } else if (page === "wishlist") {
-                        document.getElementById("nav-wishlist").classList.add("active");
-                        openWishlist();
-                    } else if (page === "purchases") {
-                        document.getElementById("nav-purchases").classList.add("active");
-                        openPurchases();
-                    }
-                };
-
-                // Progressive enhancement: browsers that support the View Transitions API get a
-                // smooth cross-fade/slide between pages for free; everything else just falls back
-                // to the existing fadeView CSS animation on .page-view.active - no broken behavior
-                // either way.
-                if (document.startViewTransition) {
-                    document.startViewTransition(doSwitch);
-                } else {
-                    doSwitch();
+                document.querySelectorAll(".page-view").forEach((p) => p.classList.remove("active"));
+                document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+                
+                if (page === "home") {
+                    document.getElementById("nav-home").classList.add("active");
+                    document.getElementById("home-page").classList.add("active");
+                    restoreScroll("home-page");
+                } else if (page === "wishlist") {
+                    document.getElementById("nav-wishlist").classList.add("active");
+                    openWishlist();
+                } else if (page === "purchases") {
+                    document.getElementById("nav-purchases").classList.add("active");
+                    openPurchases();
                 }
-
+                
                 // Push State to Window History for Native Back Button support
                 if (!skipHistory) {
                     history.pushState({ page: page }, "", "?" + page);
