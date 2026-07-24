@@ -339,38 +339,32 @@
                 border-radius: 10px;
                 box-shadow: none;
             }
-            /* Horizontal category chip strip (Play Store style) */
+            /* Big full-width banner cards (Play Store style) */
             .sector-grid {
                 display: flex;
-                flex-direction: row;
-                flex-wrap: nowrap;
-                gap: 12px;
+                flex-direction: column;
+                gap: 16px;
                 width: 100%;
                 padding-bottom: 6px;
-                overflow-x: auto;
-                scroll-snap-type: x proximity;
-                -webkit-overflow-scrolling: touch;
             }
-            .sector-grid::-webkit-scrollbar { display: none; }
             .sector-card {
-                flex: 0 0 auto;
-                width: 108px;
+                width: 100%;
                 background: var(--card-bg);
                 border: 1px solid var(--glass-border);
-                border-radius: var(--radius-md);
+                border-radius: var(--radius-lg);
                 overflow: hidden;
                 position: relative;
                 display: flex;
                 flex-direction: column;
-                box-shadow: none;
-                transition: border-color 0.2s ease, transform 0.15s ease;
-                scroll-snap-align: start;
+                box-shadow: var(--shadow-card);
+                transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
                 cursor: pointer;
             }
-            .sector-card:active { transform: scale(0.96); border-color: var(--primary); }
+            .sector-card:active { transform: scale(0.98); border-color: var(--primary); }
+            .sector-card:hover { box-shadow: var(--shadow-raised); }
             .sector-img-wrap {
                 width: 100%;
-                aspect-ratio: 1 / 1;
+                aspect-ratio: 16 / 9;
                 display: block;
                 background: var(--surface-variant);
                 position: relative;
@@ -382,34 +376,34 @@
             }
             .sector-card:hover .sector-img-wrap img { transform: none; }
             .sector-info {
-                padding: 8px 10px;
+                padding: 14px 18px;
                 display: flex;
-                justify-content: center;
+                justify-content: flex-start;
                 align-items: center;
                 background: var(--card-bg);
                 border-top: 1px solid var(--glass-border);
             }
             .sector-name {
-                font-size: 0.78rem;
+                font-size: 1rem;
                 font-weight: 700;
                 color: var(--text-main);
-                text-align: center;
+                text-align: left;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 width: 100%;
             }
-            /* Product grid */
+            /* Product grid — 3 per row, Play Store style */
             .grid {
                 display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 14px;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
             }
             .card {
                 background: var(--card-bg);
                 border: 1px solid var(--glass-border);
-                border-radius: var(--radius-md);
-                padding: 15px;
+                border-radius: var(--radius-sm);
+                padding: 10px;
                 box-shadow: var(--shadow-card);
                 cursor: pointer;
                 position: relative;
@@ -457,14 +451,38 @@
             .card.last-clicked { border-color: var(--success); }
             .card img {
                 width: 100%;
-                height: 90px;
+                height: 70px;
                 object-fit: contain;
-                margin-bottom: 15px;
+                margin-bottom: 10px;
                 pointer-events: none;
                 filter: none;
             }
-            .card h3 { font-size: 0.92rem; font-weight: 700; margin: 0 0 5px; line-height: 1.3; color: var(--text-main); }
+            .card h3 {
+                font-size: 0.78rem;
+                font-weight: 600;
+                margin: 0 0 6px;
+                line-height: 1.3;
+                color: var(--text-main);
+                white-space: normal;
+                overflow-wrap: break-word;
+                width: 100%;
+            }
             .card p { font-size: 0.72rem; color: var(--success); margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+            .price-row {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 1px;
+                margin-top: auto;
+            }
+            .price-current { font-size: 0.85rem; font-weight: 800; color: var(--text-main); }
+            .price-original {
+                font-size: 0.68rem;
+                font-weight: 600;
+                color: var(--text-sub);
+                text-decoration: line-through;
+            }
             .wish-icon {
                 position: absolute; top: 10px; right: 10px; z-index: 5;
                 background: var(--surface-variant);
@@ -516,42 +534,59 @@
                 box-shadow: none;
                 transform: none;
             }
+            /* Modals are rendered as full, normal pages — no dim backdrop, no centered
+               popup card. toggleModal() in the JS is unchanged; it just adds/removes
+               .active, which now reveals a full page instead of an overlay. */
             .modal {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(20, 20, 30, 0.45);
-                z-index: 20000; display: none; align-items: center; justify-content: center;
+                background: var(--bg-color);
+                z-index: 20000; display: none; align-items: stretch; justify-content: center;
             }
             .modal.active { display: flex; animation: fadeIn 0.15s forwards; }
             .modal-content {
-                width: 90%;
-                max-width: 400px;
+                width: 100%;
+                max-width: 480px;
+                margin: 0 auto;
                 background: var(--surface);
-                border: 1px solid var(--glass-border);
-                border-radius: 28px;
-                padding: 28px;
-                box-shadow: var(--shadow-raised);
-                max-height: 85vh;
+                border: none;
+                border-radius: 0;
+                padding: 20px 20px 100px;
+                box-shadow: none;
+                max-height: 100vh;
+                min-height: 100%;
                 overflow-y: auto;
                 overscroll-behavior: contain;
                 position: relative;
-                transform: scale(0.98);
-                opacity: 0;
+                transform: none;
+                opacity: 1;
             }
-            .modal.active .modal-content { animation: popIn 0.2s ease forwards; }
+            .modal.active .modal-content { animation: fadeView 0.2s ease; }
             @keyframes popIn { to { transform: scale(1); opacity: 1; } }
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-            .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
-            .modal-title { font-weight: 800; font-size: 1.35rem; color: var(--text-main); }
+            .modal-header {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin: 0 -20px 20px;
+                padding: 14px 16px;
+                position: sticky;
+                top: 0;
+                background: var(--surface);
+                border-bottom: 1px solid var(--glass-border);
+                z-index: 5;
+            }
+            .modal-title { font-weight: 800; font-size: 1.15rem; color: var(--text-main); flex: 1; }
             .close-btn {
                 background: var(--surface-variant);
                 border: none;
-                width: 34px; height: 34px; border-radius: 50%;
-                font-size: 1.05rem;
+                width: 36px; height: 36px; border-radius: 50%;
+                font-size: 1rem;
                 color: var(--text-main);
                 display: flex; align-items: center; justify-content: center;
                 cursor: pointer; transition: background-color 0.15s ease;
+                order: -1;
             }
-            .close-btn:hover { background: var(--secondary-container); color: var(--danger); }
+            .close-btn:hover { background: var(--primary-container); color: var(--primary); }
             .desc-box {
                 background: var(--card-bg);
                 border: 1px solid var(--glass-border);
@@ -630,19 +665,22 @@
             /* DESKTOP RESPONSIVENESS */
             @media (min-width: 1024px) {
                 #mobile-viewport { max-width: 1200px; padding-bottom: 60px; }
-                .grid { grid-template-columns: repeat(4, 1fr); }
+                .grid { grid-template-columns: repeat(6, 1fr); }
                 header { max-width: 1200px; padding: 16px 40px; }
                 .container { padding: 30px 60px; }
                 .section-title { font-size: 1.5rem; }
-                .card { padding: 20px; }
-                .modal-content { max-width: 600px; }
+                .card { padding: 14px; }
             }
 
             /* MOBILE RESPONSIVE */
             @media (max-width: 640px) {
-                .grid { grid-template-columns: repeat(2, 1fr); }
+                .grid { grid-template-columns: repeat(3, 1fr); }
                 .section-title { font-size: 1.05rem; }
-                .card img { height: 70px; }
+                .card img { height: 64px; }
+            }
+            @media (max-width: 360px) {
+                .card h3 { font-size: 0.72rem; }
+                .price-current { font-size: 0.78rem; }
             }
             #toast-container {
                 position: fixed; top: 20px; right: 20px; left: auto; width: auto; max-width: 300px;
@@ -976,7 +1014,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="modal-title">Account</div>
-                    <button class="close-btn" onclick="toggleModal('auth-modal', false)">&times;</button>
+                    <button class="close-btn" onclick="toggleModal('auth-modal', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
                 <div id="auth-login-box">
                     <button
@@ -1042,7 +1080,7 @@
         <div id="modal-detail" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <button class="close-btn" onclick="toggleModal('modal-detail', false)">&times;</button>
+                    <button class="close-btn" onclick="toggleModal('modal-detail', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
                 <div style="text-align: center">
                     <img
@@ -1094,7 +1132,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="modal-title">Profile</div>
-                    <button class="close-btn" onclick="toggleModal('modal-profile', false)">&times;</button>
+                    <button class="close-btn" onclick="toggleModal('modal-profile', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
                 <div style="text-align: center; margin-bottom: 25px">
                     <img
@@ -1154,7 +1192,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="modal-title">Support</div>
-                    <button class="close-btn" onclick="toggleModal('modal-support', false)">&times;</button>
+                    <button class="close-btn" onclick="toggleModal('modal-support', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
                 <div
                     id="support-history"
@@ -1199,7 +1237,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="modal-title" id="info-title"></div>
-                    <button class="close-btn" onclick="toggleModal('modal-info', false)">&times;</button>
+                    <button class="close-btn" onclick="toggleModal('modal-info', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
                 <div
                     id="info-body"
@@ -1244,7 +1282,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="modal-title">Secure Payment</div>
-                    <button class="close-btn" onclick="toggleModal('modal-payment', false)">&times;</button>
+                    <button class="close-btn" onclick="toggleModal('modal-payment', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
                 
                 <div style="background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%); padding: 25px 20px; border-radius: 20px; margin-bottom: 25px; color: white; text-align: center; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);">
@@ -2165,7 +2203,7 @@
                             const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
                                 ? `<div style="position:absolute; top:10px; right:45px; z-index:5;"><img src="bluetick.png" style="width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));"></div>` : '';
                             const tagsHtml = getTagsHtml(app);
-                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"> ${badge} ${ownedHtml} <div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div> ${tagsHtml} <h3 style="margin-top:10px;">${app.title}</h3><p>${app.category}</p></div>`;
+                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"> ${badge} ${ownedHtml} <div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div> ${tagsHtml} <h3 style="margin-top:10px;">${app.title}</h3>${getPriceHtml(app)}</div>`;
                         });
                         if (apps.length === 0)
                             grid.innerHTML =
@@ -2188,7 +2226,7 @@
                         grid.innerHTML = "";
                         const hits = allApps.filter((a) => a.title.toLowerCase().includes(val));
                         hits.forEach((app) => {
-                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3><p>${app.category}</p></div>`;
+                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
                         });
                         if (hits.length === 0)
                             grid.innerHTML = '<p style="text-align:center; width:100%;">No results</p>';
@@ -2394,7 +2432,7 @@
                 if (currentUser && currentUser.wishlist) {
                     const list = allApps.filter((a) => currentUser.wishlist.includes(a.id));
                     list.forEach((app) => {
-                        grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon active" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3></div>`;
+                        grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon active" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
                     });
                 } else {
                     grid.innerHTML = '<p style="text-align:center; color:var(--text-sub);">Empty</p>';
@@ -2694,6 +2732,13 @@
                 event.target.value = ''; // Reset input
             }
             
+            function getPriceHtml(app) {
+                if (!app.price || app.price <= 0) {
+                    return `<div class="price-row"><span class="price-current">FREE</span></div>`;
+                }
+                const hasDiscount = app.mrp && app.mrp > app.price;
+                return `<div class="price-row">${hasDiscount ? `<span class="price-original">₹${app.mrp}</span>` : ""}<span class="price-current">₹${app.price}</span></div>`;
+            }
             function getTagsHtml(app) {
                 let tags = `<div class="prod-tags">`;
                 if(app.price && app.price > 500) tags += `<span class="ptag ptag-premium">PREMIUM</span>`;
