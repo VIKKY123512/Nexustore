@@ -192,10 +192,11 @@
                 overflow: hidden;
                 transition: background 0.3s ease, color 0.3s ease;
             }
-            #canvas-container {
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                z-index: 0; pointer-events: none; opacity: 0; display: none;
-            }
+            /* Decorative background canvas removed (it was hidden but still ran a
+               24/7 requestAnimationFrame loop plus a global click listener — pure
+               lag with zero visible benefit). Kept as a no-op placeholder so
+               nothing else that references the id breaks. */
+            #canvas-container { display: none; }
             #mobile-viewport {
                 width: 100%;
                 max-width: 480px;
@@ -393,49 +394,40 @@
                 text-overflow: ellipsis;
                 width: 100%;
             }
-            /* Product grid — 3 per row, Play Store style */
+            /* Product grid — 3 per row, flat Play Store style: no card chrome,
+               just a big rounded cover image with the title/price underneath. */
             .grid {
                 display: grid;
                 grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
+                gap: 14px 10px;
+                contain: layout style;
             }
             .card {
-                background: var(--card-bg);
-                border: 1px solid var(--glass-border);
-                border-radius: var(--radius-sm);
-                padding: 10px;
-                box-shadow: var(--shadow-card);
+                background: transparent;
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                box-shadow: none;
                 cursor: pointer;
                 position: relative;
-                overflow: hidden;
                 display: flex;
                 flex-direction: column;
-                align-items: center;
-                text-align: center;
-                transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+                align-items: flex-start;
+                text-align: left;
+                transition: opacity 0.15s ease;
             }
             .skeleton-layer {
                 position: absolute;
                 top: 0; left: 0; right: 0; bottom: 0;
-                background: linear-gradient(90deg, var(--surface-variant) 25%, var(--surface-container-high) 50%, var(--surface-variant) 75%);
-                background-size: 400% 100%;
-                animation: skeletonShimmer 1.4s ease infinite;
+                background: var(--surface-variant);
                 border-radius: inherit;
                 z-index: 1;
                 transition: opacity 0.3s ease;
             }
-            .skel-img { position: relative; z-index: 2; opacity: 0; transition: opacity 0.3s ease; }
+            .skel-img { position: relative; z-index: 2; opacity: 0; transition: opacity 0.25s ease; }
             .skel-img.loaded { opacity: 1; }
             .banner-container { width: 100%; margin-bottom: 20px; position: relative; display: none; }
-            @keyframes skeletonShimmer {
-                0% { background-position: 100% 50%; }
-                100% { background-position: 0 50%; }
-            }
-            #cat-page-grid .card {
-                position: relative;
-                box-shadow: var(--shadow-card);
-                border-top: 1px solid var(--glass-border);
-            }
+            #cat-page-grid .card { position: relative; }
             .chat-bubble {
                 padding: 12px 16px;
                 border-radius: 16px;
@@ -446,21 +438,33 @@
                 position: relative;
                 z-index: 2;
             }
-            .card:active { transform: scale(0.97); }
-            .card:hover { border-color: var(--primary); box-shadow: var(--shadow-raised); }
-            .card.last-clicked { border-color: var(--success); }
+            .card:active { opacity: 0.8; }
+            /* Fine (hover-capable) pointers get a subtle lift; touch devices get none — cheap either way */
+            @media (hover: hover) {
+                .card:hover .prod-img-wrap { box-shadow: var(--shadow-raised); }
+            }
+            .card.last-clicked .prod-img-wrap { outline: 2px solid var(--success); outline-offset: 2px; }
+            /* Big rounded cover-art wrapper, edge-to-edge like a book/app cover */
+            .prod-img-wrap {
+                width: 100%;
+                aspect-ratio: 3 / 4;
+                border-radius: var(--radius-md);
+                overflow: hidden;
+                background: var(--surface-variant);
+                position: relative;
+                margin-bottom: 8px;
+                transition: box-shadow 0.15s ease;
+            }
             .card img {
                 width: 100%;
-                height: 70px;
-                object-fit: contain;
-                margin-bottom: 10px;
+                height: 100%;
+                object-fit: cover;
                 pointer-events: none;
-                filter: none;
             }
             .card h3 {
-                font-size: 0.78rem;
+                font-size: 0.8rem;
                 font-weight: 600;
-                margin: 0 0 6px;
+                margin: 0 0 4px;
                 line-height: 1.3;
                 color: var(--text-main);
                 white-space: normal;
@@ -471,24 +475,25 @@
             .price-row {
                 width: 100%;
                 display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 1px;
+                flex-direction: row;
+                align-items: baseline;
+                gap: 6px;
                 margin-top: auto;
+                flex-wrap: wrap;
             }
             .price-current { font-size: 0.85rem; font-weight: 800; color: var(--text-main); }
             .price-original {
-                font-size: 0.68rem;
-                font-weight: 600;
+                font-size: 0.72rem;
+                font-weight: 500;
                 color: var(--text-sub);
                 text-decoration: line-through;
             }
             .wish-icon {
-                position: absolute; top: 10px; right: 10px; z-index: 5;
-                background: var(--surface-variant);
-                width: 32px; height: 32px; border-radius: 50%;
+                position: absolute; top: 8px; right: 8px; z-index: 5;
+                background: rgba(20, 20, 30, 0.45);
+                width: 30px; height: 30px; border-radius: 50%;
                 display: flex; align-items: center; justify-content: center;
-                color: var(--text-sub); border: none; transition: background-color 0.2s ease;
+                color: #fff; border: none; transition: background-color 0.2s ease;
             }
             .wish-icon i { transition: color 0.2s ease; }
             .wish-icon.active { background: var(--secondary-container); }
@@ -669,14 +674,12 @@
                 header { max-width: 1200px; padding: 16px 40px; }
                 .container { padding: 30px 60px; }
                 .section-title { font-size: 1.5rem; }
-                .card { padding: 14px; }
             }
 
             /* MOBILE RESPONSIVE */
             @media (max-width: 640px) {
                 .grid { grid-template-columns: repeat(3, 1fr); }
                 .section-title { font-size: 1.05rem; }
-                .card img { height: 64px; }
             }
             @media (max-width: 360px) {
                 .card h3 { font-size: 0.72rem; }
@@ -792,48 +795,19 @@
             #mobile-viewport { contain: content; overscroll-behavior-y: none; }
             .loader-container { display: flex; justify-content: center; align-items: center; width: 100%; padding: 40px 0; }
 
-            /* --- 3D loader, retinted to brand primary, motion unchanged --- */
+            /* --- Lightweight flat spinner (replaces the old 8-box 3D cube loader,
+               which ran 9 separate infinite 3D-transform animations at once).
+               Same .cube-loader class name kept so the existing markup/JS needs
+               no changes — CSS now just draws a single cheap ring spinner. --- */
             .cube-loader {
-                --duration: 3s;
-                --primary: var(--primary, #4C4FE8);
-                --primary-light: var(--primary-container, #E2E1FF);
-                width: 160px; height: 250px; position: relative;
-                transform-style: preserve-3d; zoom: 0.45; margin: 0 auto;
+                width: 42px; height: 42px; margin: 0 auto;
+                border: 3px solid var(--surface-container-high);
+                border-top-color: var(--primary);
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
             }
-            .cube-loader:before, .cube-loader:after {
-                --r: 20.5deg; content: ""; width: 250px; height: 110px; position: absolute;
-                right: 32%; bottom: -10px; background: transparent;
-                transform: translateZ(160px) rotate(var(--r));
-                animation: mask var(--duration) linear forwards infinite;
-            }
-            .cube-loader:after { --r: -20.5deg; right: auto; left: 32%; }
-            .cube-loader .box { width: 26px; height: 26px; position: absolute; bottom: 0; left: 70px; transform-style: preserve-3d; transform: translateZ(80px); }
-            .cube-loader .box > div { --bg: var(--primary); width: 100%; height: 100%; background: var(--bg); position: absolute; }
-            .cube-loader .box > div:before, .cube-loader .box > div:after { content: ""; position: absolute; width: 100%; height: 100%; background: var(--bg); }
-            .cube-loader .box > div:before { background: var(--primary-light); transform: rotateY(90deg) translateX(-13px) translateZ(-13px); }
-            .cube-loader .box > div:after { background: var(--primary-light); transform: rotateX(90deg) translateY(13px) translateZ(-13px); }
-            .cube-loader .box0 { animation: box-scale0 var(--duration) linear forwards infinite; }
-            .cube-loader .box1 { animation: box-scale1 var(--duration) linear forwards infinite; }
-            .cube-loader .box2 { animation: box-scale2 var(--duration) linear forwards infinite; }
-            .cube-loader .box3 { animation: box-scale3 var(--duration) linear forwards infinite; }
-            .cube-loader .box4 { animation: box-scale4 var(--duration) linear forwards infinite; }
-            .cube-loader .box5 { animation: box-scale5 var(--duration) linear forwards infinite; }
-            .cube-loader .box6 { animation: box-scale6 var(--duration) linear forwards infinite; }
-            .cube-loader .box7 { animation: box-scale7 var(--duration) linear forwards infinite; }
-            .cube-loader .ground {
-                width: 150%; height: 150%; position: absolute; bottom: -35px; left: -25%;
-                background: radial-gradient(circle, var(--primary-container) 0%, transparent 60%);
-                transform: rotateX(90deg); opacity: 0.5;
-            }
-            @keyframes box-scale0 { 0%, 15%, 100% { transform: translateZ(80px) scale(0); } 20%, 90% { transform: translateZ(80px) scale(1); } }
-            @keyframes box-scale1 { 0%, 20%, 100% { transform: translate(-26px, -26px) translateZ(80px) scale(0); } 25%, 90% { transform: translate(-26px, -26px) translateZ(80px) scale(1); } }
-            @keyframes box-scale2 { 0%, 25%, 100% { transform: translate(-52px, -52px) translateZ(80px) scale(0); } 30%, 90% { transform: translate(-52px, -52px) translateZ(80px) scale(1); } }
-            @keyframes box-scale3 { 0%, 30%, 100% { transform: translate(26px, -26px) translateZ(80px) scale(0); } 35%, 90% { transform: translate(26px, -26px) translateZ(80px) scale(1); } }
-            @keyframes box-scale4 { 0%, 35%, 100% { transform: translate(52px, -52px) translateZ(80px) scale(0); } 40%, 90% { transform: translate(52px, -52px) translateZ(80px) scale(1); } }
-            @keyframes box-scale5 { 0%, 40%, 100% { transform: translate(-26px, -78px) translateZ(80px) scale(0); } 45%, 90% { transform: translate(-26px, -78px) translateZ(80px) scale(1); } }
-            @keyframes box-scale6 { 0%, 45%, 100% { transform: translate(26px, -78px) translateZ(80px) scale(0); } 50%, 90% { transform: translate(26px, -78px) translateZ(80px) scale(1); } }
-            @keyframes box-scale7 { 0%, 50%, 100% { transform: translate(0px, -104px) translateZ(80px) scale(0); } 55%, 90% { transform: translate(0px, -104px) translateZ(80px) scale(1); } }
-            @keyframes mask { 0%, 65% { transform: translateZ(160px) rotate(var(--r)); } 75%, 100% { transform: translateZ(160px) translateY(320px) rotate(var(--r)); } }
+            .cube-loader .box, .cube-loader .ground { display: none; }
+            @keyframes spin { to { transform: rotate(360deg); } }
 
             /* --- Social hover cards, flattened --- */
             #social-cards-container { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; padding: 10px; position: relative; }
@@ -938,7 +912,7 @@
                     ><input type="text" class="search-input" id="search-input" placeholder="Search products..." />
                 </div>
                 <div id="home-page" class="page-view active">
-                    <div class="section-title">BROWSE SECTORS</div>
+                    <div class="section-title">CATEGORIES</div>
                     <div id="sector-grid" class="sector-grid">
                         <div class="loader-container">
                             <div class="cube-loader">
@@ -965,7 +939,7 @@
                 <div id="category-page" class="page-view">
                     <div id="cat-page-header" class="clickable-header">
                         <div class="icon-btn"><i class="fas fa-arrow-left"></i></div>
-                        <h3 style="margin: 0" id="cat-back-title">Sectors</h3>
+                        <h3 style="margin: 0" id="cat-back-title">Categories</h3>
                     </div>
                     <h3 class="section-title" id="cat-page-title" style="margin-top: 0">Apps</h3>
                     <div id="cat-page-grid" class="grid"></div>
@@ -2176,7 +2150,7 @@
                         document.getElementById("home-page").classList.add("active");
                         restoreScroll("home-page");
                     };
-                    document.getElementById("cat-back-title").innerText = "Sectors";
+                    document.getElementById("cat-back-title").innerText = "Categories";
                 }
                 setTimeout(() => {
                     grid.innerHTML = "";
@@ -2203,7 +2177,7 @@
                             const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
                                 ? `<div style="position:absolute; top:10px; right:45px; z-index:5;"><img src="bluetick.png" style="width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));"></div>` : '';
                             const tagsHtml = getTagsHtml(app);
-                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"> ${badge} ${ownedHtml} <div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div> ${tagsHtml} <h3 style="margin-top:10px;">${app.title}</h3>${getPriceHtml(app)}</div>`;
+                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${badge} ${ownedHtml} <div class="wish-icon" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
                         });
                         if (apps.length === 0)
                             grid.innerHTML =
@@ -2226,7 +2200,7 @@
                         grid.innerHTML = "";
                         const hits = allApps.filter((a) => a.title.toLowerCase().includes(val));
                         hits.forEach((app) => {
-                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="wish-icon" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
                         });
                         if (hits.length === 0)
                             grid.innerHTML = '<p style="text-align:center; width:100%;">No results</p>';
@@ -2432,7 +2406,7 @@
                 if (currentUser && currentUser.wishlist) {
                     const list = allApps.filter((a) => currentUser.wishlist.includes(a.id));
                     list.forEach((app) => {
-                        grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="wish-icon active" onclick="toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div style="position: relative; width: 100%; height: 90px; margin-bottom: 15px; border-radius: 10px; overflow: hidden;"><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: contain;"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                        grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="wish-icon active" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
                     });
                 } else {
                     grid.innerHTML = '<p style="text-align:center; color:var(--text-sub);">Empty</p>';
@@ -2523,35 +2497,8 @@
                 }
             }
 
-            // Mini Ocean Bubbles for Support Chat
-            setInterval(() => {
-                const modal = document.getElementById('modal-support');
-                if (!modal.classList.contains('active')) return;
-                const div = document.getElementById("support-history");
-                if (!div) return;
-                
-                const b = document.createElement("div");
-                b.style.position = "absolute";
-                b.style.bottom = "-20px";
-                b.style.left = Math.random() * 100 + "%";
-                const size = Math.random() * 12 + 4;
-                b.style.width = size + "px";
-                b.style.height = size + "px";
-                b.style.background = "rgba(0, 242, 254, 0.15)";
-                b.style.border = "1px solid rgba(0, 242, 254, 0.3)";
-                b.style.borderRadius = "50%";
-                b.style.pointerEvents = "none";
-                b.style.zIndex = "0";
-                b.style.transition = "transform 4s linear, opacity 4s linear";
-                
-                div.appendChild(b);
-                
-                setTimeout(() => {
-                    b.style.transform = `translateY(-350px) translateX(${(Math.random()-0.5)*40}px)`;
-                    b.style.opacity = "0";
-                }, 50);
-                setTimeout(() => b.remove(), 4000);
-            }, 350);
+            // (Decorative floating-bubble setInterval removed — it ran every 350ms
+            // for the entire page lifetime, constantly creating/removing DOM nodes.)
             function openPage(type) {
                 db.ref("site_settings/pages/" + type).once("value", (s) => {
                     document.getElementById("info-title").innerText = type.toUpperCase();
@@ -2607,22 +2554,8 @@
                 box.style.display = box.style.display === "block" ? "none" : "block";
                 document.getElementById("notif-dot").style.display = "none";
             }
-            const canvasContainer = document.getElementById("canvas-container");
-            const canvas = document.createElement("canvas");
-            canvas.style.width = "100%";
-            canvas.style.height = "100%";
-            canvasContainer.appendChild(canvas);
-            const ctx = canvas.getContext("2d", { alpha: true });
-            let bubbles = [];
-            
-            function resize() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-            }
-            window.addEventListener("resize", resize);
-            resize();
-            
-            // Web Audio API for Ocean UI Sounds
+            // Web Audio API for Ocean UI Sounds (short click/feedback blips only —
+            // no persistent canvas animation loop; this is cheap and runs once per call)
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             function playOceanSound(type) {
                 if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -2751,99 +2684,10 @@
 
             // (Removed overriding syncUserUI so the permanent bluetick works correctly)
 
-            // Ocean Physics Engine (Zero-Lag Bubbles Only)
-            class Bubble {
-                constructor() {
-                    this.reset();
-                    this.y = Math.random() * canvas.height;
-                }
-                reset() {
-                    this.radius = Math.random() * 15 + 5;
-                    this.x = Math.random() * canvas.width;
-                    this.y = canvas.height + this.radius * 2;
-                    this.speed = Math.random() * 1.5 + 0.5;
-                    this.wobble = Math.random() * Math.PI * 2;
-                    this.wobbleSpeed = Math.random() * 0.04 + 0.01;
-                    this.popped = false;
-                    this.popParticles = [];
-                }
-                update() {
-                    if (this.popped) {
-                        for(let i=this.popParticles.length-1; i>=0; i--) {
-                            let p = this.popParticles[i];
-                            p.x += p.vx;
-                            p.y += p.vy;
-                            p.vy += 0.15; // gravity
-                            p.life -= 0.05;
-                            if (p.life <= 0) this.popParticles.splice(i, 1);
-                        }
-                        if (this.popParticles.length === 0) this.reset();
-                        return;
-                    }
-                    this.y -= this.speed;
-                    this.wobble += this.wobbleSpeed;
-                    this.x += Math.sin(this.wobble) * 1.0;
-                    if (this.y < -this.radius) this.reset();
-                }
-                draw() {
-                    if (this.popped) {
-                        this.popParticles.forEach(p => {
-                            ctx.beginPath();
-                            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                            ctx.fillStyle = `rgba(0, 242, 254, ${p.life})`;
-                            ctx.fill();
-                        });
-                        return;
-                    }
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(0, 242, 254, 0.15)`;
-                    ctx.fill();
-                    ctx.strokeStyle = `rgba(0, 242, 254, 0.4)`;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                    
-                    // Simple Highlight for Glass effect
-                    ctx.beginPath();
-                    ctx.arc(this.x - this.radius*0.3, this.y - this.radius*0.3, this.radius*0.2, 0, Math.PI * 2);
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-                    ctx.fill();
-                }
-                pop() {
-                    this.popped = true;
-                    for (let i=0; i<8; i++) {
-                        this.popParticles.push({
-                            x: this.x, y: this.y,
-                            vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
-                            r: Math.random()*3+1, life: 1
-                        });
-                    }
-                }
-            }
-            
-            // Reduced bubble count to ensure absolutely zero lag on all devices
-            bubbles = []; // FIXED: Removed 'let' to prevent SyntaxError script crash
-            for (let i = 0; i < 25; i++) bubbles.push(new Bubble());
-            
-            function animateCanvas() {
-                requestAnimationFrame(animateCanvas);
-                // We keep animations running even when modals are open so support chat sees bubbles
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                bubbles.forEach(b => { b.update(); b.draw(); });
-            }
-            animateCanvas();
-            
-            // Fast click detection for popping (works globally, even through transparent modals)
-            document.addEventListener("click", (e) => {
-                const mx = e.clientX;
-                const my = e.clientY;
-                bubbles.forEach(b => {
-                    if (!b.popped) {
-                        const dist = Math.hypot(b.x - mx, b.y - my);
-                        if (dist < b.radius + 25) { b.pop(); playOceanSound('pop'); }
-                    }
-                });
-            });
+            // (Decorative bubble-canvas engine removed entirely — it ran a
+            // requestAnimationFrame loop and a global click listener 24/7 even
+            // though the canvas was permanently display:none. Removing it stops
+            // that constant background CPU usage with zero visible change.)
             db.ref("site_settings/popup").once("value", (s) => {
                 const p = s.val() || { title: "Welcome to Nexus", msg: "Enjoy premium apps & tools.", active: true };
                 if (p.active) {
