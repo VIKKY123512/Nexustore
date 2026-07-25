@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <title>Nexustore - Premium Digital Products & Modded Apps</title>
         <meta name="description" content="NexusStore - Premium Digital Products & Tools. Instantly download the best apps, verified and secure." />
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://*; img-src 'self' data: blob: https://*;" />
@@ -151,12 +151,18 @@
                 background: var(--primary-container); border: none; color: var(--primary);
                 padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; font-weight: 600;
             }
+            html {
+                margin: 0;
+                height: 100%;
+                background: #000000; /* matches the galaxy backdrop — no line can ever peek through on curved/notched screens */
+            }
             body {
                 margin: 0;
                 background: transparent;
                 font-family: var(--font-body);
                 color: var(--text-main);
                 height: 100vh;
+                height: 100dvh; /* real viewport height on mobile browsers, avoids gaps when the address bar shows/hides */
                 display: flex;
                 justify-content: center;
                 overflow: hidden;
@@ -169,13 +175,18 @@
                lag no matter how long it's been drifting. */
             #canvas-container {
                 position: fixed;
-                inset: 0;
+                top: -2px;
+                left: -2px;
+                right: -2px;
+                bottom: -2px;
+                width: calc(100% + 4px);
+                height: calc(100dvh + 4px);
                 z-index: -1;
                 pointer-events: none;
                 overflow: hidden;
                 perspective: 900px;
-                background: radial-gradient(ellipse 120% 55% at 28% 18%, rgba(160, 110, 255, 0.35), transparent 60%),
-                    linear-gradient(160deg, #0a0620 0%, #170c3a 35%, #241454 62%, #0d0724 100%);
+                background: radial-gradient(ellipse 120% 55% at 28% 18%, rgba(90, 60, 150, 0.10), transparent 55%),
+                    linear-gradient(160deg, #000000 0%, #050308 40%, #07040f 70%, #020103 100%);
             }
             #canvas-container .star-layer {
                 position: absolute;
@@ -222,8 +233,10 @@
                 overflow-y: auto;
                 overflow-x: hidden;
                 z-index: 1;
-                padding-top: 78px;
-                padding-bottom: 110px;
+                padding-top: calc(78px + env(safe-area-inset-top, 0px));
+                padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+                padding-left: env(safe-area-inset-left, 0px);
+                padding-right: env(safe-area-inset-right, 0px);
                 scroll-behavior: smooth;
                 background: transparent;
             }
@@ -237,7 +250,7 @@
                 width: 100%;
                 max-width: 480px;
                 margin: 0;
-                padding: 16px 20px;
+                padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 16px;
                 background: var(--surface);
                 border-bottom: 1px solid var(--glass-border);
                 border-radius: 0;
@@ -433,6 +446,12 @@
                 align-items: flex-start;
                 text-align: left;
                 transition: opacity 0.15s ease;
+                /* Skip layout/paint work for cards currently scrolled off-screen —
+                   the browser reserves the space via contain-intrinsic-size and
+                   only does real work once a card nears the viewport. Meaningful
+                   speed-up on long product grids with zero visual change. */
+                content-visibility: auto;
+                contain-intrinsic-size: 0 260px;
             }
             .skeleton-layer {
                 position: absolute;
@@ -524,7 +543,7 @@
             .app-badge.update { background: var(--update-badge); color: #fff; box-shadow: none; }
             .bottom-nav {
                 position: fixed;
-                bottom: 18px;
+                bottom: calc(18px + env(safe-area-inset-bottom, 0px));
                 left: 50%;
                 transform: translateX(-50%);
                 width: 92%;
