@@ -65,49 +65,47 @@
                 -webkit-tap-highlight-color: transparent;
             }
             :root {
-                color-scheme: light;
-                /* --- Core surfaces (light purple theme — content surfaces are still
-                     opaque cards; the starfield behind them is now a soft light-purple
-                     nebula instead of black space, so star dots switch to a darker
-                     tone below to stay visible) --- */
-                --bg-color: #F4F1FC;
+                color-scheme: dark;
+                /* --- Core surfaces (premium dark navy per brief) --- */
+                --bg-color: #0B1220;
                 --bg-gradient: none;
-                --surface: #FFFFFF;
-                --surface-variant: #ECE6FA;
-                --surface-container: #F6F2FD;
-                --surface-container-high: #E4DCF7;
+                --surface: #111827;
+                --surface-variant: #1E293B;
+                --surface-container: #161F2E;
+                --surface-container-high: #243043;
 
                 /* --- Text --- */
-                --text-main: #241F38;
-                --text-sub: #6A6280;
+                --text-main: #FFFFFF;
+                --text-sub: #94A3B8;
 
                 /* --- Brand --- */
-                --primary: #6D5AE0;
-                --primary-container: #E1DAFB;
+                --primary: #3B82F6;
+                --primary-container: #1D3A63;
                 --on-primary: #FFFFFF;
-                --secondary: #E0654A;
-                --secondary-container: #FCE3DC;
+                --secondary: #06B6D4;
+                --secondary-container: #164E56;
 
                 /* --- Legacy names kept for compatibility, flat values --- */
                 --glass-header: var(--surface);
-                --glass-border: #DCD3F2;
-                --card-bg: var(--surface);
+                --glass-border: rgba(148, 163, 184, 0.16);
+                --card-bg: #1E293B;
                 --modal-bg: var(--surface);
-                --accent-gradient: linear-gradient(135deg, #6D6FFF 0%, #8A8CFF 100%);
-                --premium-gradient: linear-gradient(135deg, #9A7BFF 0%, #FF8A66 100%);
-                --success: #2FAE72;
-                --danger: #E23B34;
-                --update-badge: #2E86D6;
+                --accent-gradient: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);
+                --premium-gradient: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);
+                --success: #22C55E;
+                --danger: #EF4444;
+                --warning: #F59E0B;
+                --update-badge: #06B6D4;
 
                 /* --- Shape --- */
-                --radius-lg: 24px;
+                --radius-lg: 20px;
                 --radius-md: 16px;
                 --radius-sm: 12px;
 
-                /* --- Elevation (flat, no glow) --- */
-                --shadow-card: 0 1px 2px rgba(109, 90, 224, 0.08), 0 1px 6px rgba(109, 90, 224, 0.08);
-                --shadow-raised: 0 4px 16px rgba(109, 90, 224, 0.14);
-                --glow-accent: 0 1px 2px rgba(109, 90, 224, 0.1);
+                /* --- Elevation --- */
+                --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 8px rgba(0, 0, 0, 0.24);
+                --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.4);
+                --glow-accent: 0 1px 2px rgba(59, 130, 246, 0.15);
 
                 --font-body: "Outfit", sans-serif;
             }
@@ -154,7 +152,7 @@
             html {
                 margin: 0;
                 height: 100%;
-                background: #F4F1FC; /* matches the light-purple backdrop — no line can ever peek through on curved/notched screens */
+                background: #0B1220; /* matches the dark navy backdrop — no line can ever peek through on curved/notched screens */
             }
             body {
                 margin: 0;
@@ -184,8 +182,8 @@
                 z-index: -1;
                 pointer-events: none;
                 overflow: hidden;
-                background: radial-gradient(ellipse 120% 55% at 28% 18%, rgba(160, 130, 240, 0.16), transparent 55%),
-                    linear-gradient(160deg, #F4F1FC 0%, #EFE9FA 40%, #E9E1F8 70%, #E3D9F6 100%);
+                background: radial-gradient(ellipse 120% 55% at 28% 18%, rgba(59, 130, 246, 0.10), transparent 55%),
+                    linear-gradient(160deg, #0B1220 0%, #0D1526 40%, #0F1A2E 70%, #0B1220 100%);
             }
             /* Flat 2D star layers — no perspective/translate3d, just plain
                X/Y drift on the compositor (still GPU-cheap, just no depth). */
@@ -246,16 +244,22 @@
                 max-width: 480px;
                 margin: 0;
                 padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 16px;
-                background: var(--surface);
-                border-bottom: 1px solid var(--glass-border);
+                background: transparent;
+                border-bottom: 1px solid transparent;
                 border-radius: 0;
                 box-shadow: none;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                transition: box-shadow 0.25s ease;
+                transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, backdrop-filter 0.2s ease;
             }
-            header.scrolled { box-shadow: var(--shadow-card); }
+            header.scrolled {
+                background: rgba(17, 24, 39, 0.72);
+                -webkit-backdrop-filter: blur(18px) saturate(160%);
+                backdrop-filter: blur(18px) saturate(160%);
+                border-bottom: 1px solid var(--glass-border);
+                box-shadow: var(--shadow-card);
+            }
             #search-bar-wrap.scrolled { box-shadow: var(--shadow-card); }
             .logo {
                 font-weight: 800;
@@ -470,8 +474,13 @@
                 z-index: 2;
             }
             .card:active { opacity: 0.8; }
-            /* Fine (hover-capable) pointers get a subtle lift; touch devices get none — cheap either way */
+            /* Fine (hover-capable) pointers get a subtle whole-card lift; touch
+               devices get none (there's no hover state to lift on). transform-only
+               so it's compositor/GPU work, not layout — cheap even on low-end
+               Android, and the whole thing finishes in 200ms. */
             @media (hover: hover) {
+                .card { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.3, 1); will-change: transform; }
+                .card:hover { transform: translateY(-4px); }
                 .card:hover .prod-img-wrap { box-shadow: var(--shadow-raised); }
             }
             .card.last-clicked .prod-img-wrap { outline: 2px solid var(--success); outline-offset: 2px; }
@@ -479,7 +488,7 @@
             .prod-img-wrap {
                 width: 100%;
                 aspect-ratio: 3 / 4;
-                border-radius: 20px;
+                border-radius: 16px;
                 overflow: hidden;
                 background: var(--surface-variant);
                 border: 1px solid var(--glass-border);
@@ -490,6 +499,37 @@
             }
             .card:active .prod-img-wrap { transform: scale(0.97); }
             .card:hover .prod-img-wrap { border-color: var(--primary); }
+            /* Quick "Buy Now" pill + discount badge, Steam-card style */
+            .discount-badge {
+                position: absolute; top: 10px; left: 10px; z-index: 5;
+                background: var(--danger); color: #fff; font-size: 0.65rem; font-weight: 800;
+                padding: 3px 8px; border-radius: 8px; letter-spacing: 0.3px;
+            }
+            .quick-buy-btn {
+                position: absolute; bottom: 8px; right: 8px; z-index: 5;
+                background: var(--accent-gradient); color: #fff; border: none;
+                font-size: 0.7rem; font-weight: 700; padding: 6px 10px; border-radius: 10px;
+                display: flex; align-items: center; gap: 5px; cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+                opacity: 0; transform: translateY(4px);
+                transition: opacity 0.18s ease, transform 0.18s ease;
+                overflow: hidden;
+            }
+            @media (hover: hover) {
+                .card:hover .quick-buy-btn { opacity: 1; transform: translateY(0); }
+            }
+            @media (hover: none) {
+                /* Touch devices have no hover to reveal it on — keep it visible, just smaller */
+                .quick-buy-btn { opacity: 1; transform: none; padding: 5px 8px; font-size: 0.65rem; }
+            }
+            .ripple-dot {
+                position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.45);
+                transform: scale(0); animation: rippleGrow 0.5s ease-out forwards;
+                pointer-events: none; z-index: 6;
+            }
+            @keyframes rippleGrow {
+                to { transform: scale(2.6); opacity: 0; }
+            }
             .card img {
                 width: 100%;
                 height: 100%;
@@ -547,10 +587,10 @@
                 transform: translateX(-50%);
                 width: 92%;
                 max-width: 400px;
-                background: rgba(255, 255, 255, 0.6);
+                background: rgba(17, 24, 39, 0.6);
                 -webkit-backdrop-filter: blur(22px) saturate(160%);
                 backdrop-filter: blur(22px) saturate(160%);
-                border: 1px solid rgba(109, 90, 224, 0.12);
+                border: 1px solid rgba(148, 163, 184, 0.14);
                 border-radius: 40px;
                 padding: 10px 26px;
                 display: flex;
@@ -2331,7 +2371,7 @@
                             const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
                                 ? `<div style="position:absolute; top:10px; right:45px; z-index:5;"><img src="bluetick.png" style="width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));"></div>` : '';
                             const tagsHtml = getTagsHtml(app);
-                            out.push(` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${badge} ${ownedHtml} <div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
+                            out.push(` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${badge} ${ownedHtml} <div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                         });
                         grid.innerHTML = out.join("");
                         if (apps.length === 0)
@@ -2356,7 +2396,7 @@
                         const hits = allApps.filter((a) => a.title.toLowerCase().includes(val));
                         let out = [];
                         hits.forEach((app) => {
-                            out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
+                            out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                         });
                         grid.innerHTML = out.join("");
                         if (hits.length === 0)
@@ -2575,7 +2615,7 @@
                     const list = allApps.filter((a) => currentUser.wishlist.includes(a.id));
                     let out = [];
                     list.forEach((app) => {
-                        out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="wish-icon active" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
+                        out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="wish-icon active" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                     });
                     grid.innerHTML = out.join("");
                 } else {
@@ -2849,6 +2889,38 @@
                 const hasDiscount = app.mrp && app.mrp > app.price;
                 return `<div class="price-row">${hasDiscount ? `<span class="price-original">₹${app.mrp}</span>` : ""}<span class="price-current">₹${app.price}</span></div>`;
             }
+            function getCardOverlayHtml(app) {
+                // Discount % badge (top-left) + a Steam-style quick "Buy Now" button
+                // (bottom-right) that purchases straight from the grid without opening
+                // the product detail page. Free products don't get a buy button here —
+                // those still route through openDetail since there's no payment to run.
+                const hasDiscount = app.price > 0 && app.mrp && app.mrp > app.price;
+                const pct = hasDiscount ? Math.round((1 - app.price / app.mrp) * 100) : 0;
+                const badgeHtml = hasDiscount ? `<div class="discount-badge">-${pct}%</div>` : "";
+                const buyHtml = (app.price && app.price > 0)
+                    ? `<button class="quick-buy-btn" onclick="event.stopPropagation(); spawnRipple(event); quickBuy('${app.id}')"><i class="fas fa-bolt"></i>Buy</button>`
+                    : "";
+                return badgeHtml + buyHtml;
+            }
+            function quickBuy(id) {
+                const app = allApps.find(a => a.id === id);
+                if (!app) return showToast("Product not found", "error");
+                initPayment(app.id, app.title, app.price);
+            }
+            // Lightweight ripple: no per-frame JS, just a positioned div with one CSS
+            // animation that removes itself when done. Cheap enough for low-end Android.
+            function spawnRipple(e) {
+                const btn = e.currentTarget;
+                const rect = btn.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height) * 1.2;
+                const dot = document.createElement("span");
+                dot.className = "ripple-dot";
+                dot.style.width = dot.style.height = size + "px";
+                dot.style.left = (e.clientX - rect.left - size / 2) + "px";
+                dot.style.top = (e.clientY - rect.top - size / 2) + "px";
+                btn.appendChild(dot);
+                setTimeout(() => dot.remove(), 500);
+            }
             function getTagsHtml(app) {
                 let tags = `<div class="prod-tags">`;
                 if(app.price && app.price > 500) tags += `<span class="ptag ptag-premium">PREMIUM</span>`;
@@ -2871,7 +2943,7 @@
                     for (let i = 0; i < count; i++) {
                         const x = Math.floor(Math.random() * w);
                         const y = Math.floor(Math.random() * h);
-                        shadows.push(`${x}px ${y}px 0 rgba(109, 90, 224, ${colorAlpha})`);
+                        shadows.push(`${x}px ${y}px 0 rgba(226, 232, 240, ${colorAlpha})`);
                     }
                     return { shadow: shadows.join(","), size: sizePx };
                 }
