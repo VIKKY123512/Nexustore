@@ -65,36 +65,39 @@
                 -webkit-tap-highlight-color: transparent;
             }
             :root {
-                color-scheme: light;
-                /* --- Core surfaces --- */
-                --bg-color: #F6F6FB;
+                color-scheme: dark;
+                /* --- Core surfaces (galaxy dark theme — permanent, not OS-preference-based
+                     anymore, since app content backgrounds are now transparent so the
+                     cosmic starfield shows through; a light theme would be unreadable
+                     against that backdrop) --- */
+                --bg-color: #121218;
                 --bg-gradient: none;
-                --surface: #FFFFFF;
-                --surface-variant: #EEEDF5;
-                --surface-container: #F1F0F8;
-                --surface-container-high: #E7E5F1;
+                --surface: #1C1B22;
+                --surface-variant: #26252E;
+                --surface-container: #201F27;
+                --surface-container-high: #2C2B35;
 
                 /* --- Text --- */
-                --text-main: #1B1B21;
-                --text-sub: #5D5B67;
+                --text-main: #EDEBF4;
+                --text-sub: #B6B3C2;
 
                 /* --- Brand --- */
-                --primary: #4C4FE8;
-                --primary-container: #E2E1FF;
-                --on-primary: #FFFFFF;
-                --secondary: #FF6A45;
-                --secondary-container: #FFE0D4;
+                --primary: #BFC0FF;
+                --primary-container: #38399B;
+                --on-primary: #1A1B6E;
+                --secondary: #FFB29A;
+                --secondary-container: #6B3524;
 
                 /* --- Legacy names kept for compatibility, flat values --- */
                 --glass-header: var(--surface);
-                --glass-border: #DEDCE8;
+                --glass-border: #363540;
                 --card-bg: var(--surface);
                 --modal-bg: var(--surface);
-                --accent-gradient: linear-gradient(135deg, #4C4FE8 0%, #6D6FFF 100%);
-                --premium-gradient: linear-gradient(135deg, #7C4DFF 0%, #FF6A45 100%);
-                --success: #1E8E5A;
-                --danger: #D93025;
-                --update-badge: #0B75C9;
+                --accent-gradient: linear-gradient(135deg, #6D6FFF 0%, #8A8CFF 100%);
+                --premium-gradient: linear-gradient(135deg, #9A7BFF 0%, #FF8A66 100%);
+                --success: #6CDA9E;
+                --danger: #FF6B60;
+                --update-badge: #6FB6F1;
 
                 /* --- Shape --- */
                 --radius-lg: 24px;
@@ -102,44 +105,11 @@
                 --radius-sm: 12px;
 
                 /* --- Elevation (flat, no glow) --- */
-                --shadow-card: 0 1px 2px rgba(20, 20, 40, 0.06), 0 1px 6px rgba(20, 20, 40, 0.05);
-                --shadow-raised: 0 2px 8px rgba(20, 20, 40, 0.10);
-                --glow-accent: 0 1px 2px rgba(20, 20, 40, 0.08);
+                --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 6px rgba(0, 0, 0, 0.3);
+                --shadow-raised: 0 2px 10px rgba(0, 0, 0, 0.4);
+                --glow-accent: 0 1px 2px rgba(0, 0, 0, 0.3);
 
                 --font-body: "Outfit", sans-serif;
-            }
-            @media (prefers-color-scheme: dark) {
-                :root {
-                    color-scheme: dark;
-                    --bg-color: #121218;
-                    --surface: #1C1B22;
-                    --surface-variant: #26252E;
-                    --surface-container: #201F27;
-                    --surface-container-high: #2C2B35;
-
-                    --text-main: #EDEBF4;
-                    --text-sub: #B6B3C2;
-
-                    --primary: #BFC0FF;
-                    --primary-container: #38399B;
-                    --on-primary: #1A1B6E;
-                    --secondary: #FFB29A;
-                    --secondary-container: #6B3524;
-
-                    --glass-header: var(--surface);
-                    --glass-border: #363540;
-                    --card-bg: var(--surface);
-                    --modal-bg: var(--surface);
-                    --accent-gradient: linear-gradient(135deg, #6D6FFF 0%, #8A8CFF 100%);
-                    --premium-gradient: linear-gradient(135deg, #9A7BFF 0%, #FF8A66 100%);
-                    --success: #6CDA9E;
-                    --danger: #FF6B60;
-                    --update-badge: #6FB6F1;
-
-                    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 6px rgba(0, 0, 0, 0.3);
-                    --shadow-raised: 0 2px 10px rgba(0, 0, 0, 0.4);
-                    --glow-accent: 0 1px 2px rgba(0, 0, 0, 0.3);
-                }
             }
             .card, .cat-card, .search-input, .desc-box {
                 background: var(--card-bg) !important;
@@ -192,16 +162,18 @@
                 overflow: hidden;
                 transition: background 0.3s ease, color 0.3s ease;
             }
-            /* Decorative background canvas removed (it was hidden but still ran a
-               24/7 requestAnimationFrame loop plus a global click listener — pure
-               lag with zero visible benefit). Kept as a no-op placeholder so
-               nothing else that references the id breaks. */
+            /* Galaxy starfield — the actual visible cosmic background. Runs on
+               transform + opacity only (both compositor-only properties), so
+               the browser promotes each layer to its own GPU layer and the
+               main thread never touches it after first paint: zero scroll/tap
+               lag no matter how long it's been drifting. */
             #canvas-container {
                 position: fixed;
                 inset: 0;
                 z-index: -1;
                 pointer-events: none;
                 overflow: hidden;
+                perspective: 900px;
                 background: radial-gradient(ellipse 120% 55% at 28% 18%, rgba(160, 110, 255, 0.35), transparent 60%),
                     linear-gradient(160deg, #0a0620 0%, #170c3a 35%, #241454 62%, #0d0724 100%);
             }
@@ -213,13 +185,27 @@
                 height: 200%;
                 border-radius: 50%;
                 background: transparent;
+                transform-style: preserve-3d;
+                will-change: transform;
+                backface-visibility: hidden;
             }
-            #canvas-container .star-layer.small { animation: galaxy-drift 260s linear infinite; opacity: 0.75; }
-            #canvas-container .star-layer.medium { animation: galaxy-drift 170s linear infinite reverse; opacity: 0.65; }
-            #canvas-container .star-layer.large { animation: galaxy-drift 300s linear infinite, galaxy-twinkle 5s ease-in-out infinite alternate; opacity: 0.9; }
-            @keyframes galaxy-drift {
-                from { transform: translate3d(0, 0, 0); }
-                to { transform: translate3d(0, -50%, 0); }
+            /* Three depth planes (far / mid / near) drifting at different
+               speeds and Z-depths — the parallax between them is what reads
+               as 3D rather than a flat scrolling pattern. */
+            #canvas-container .star-layer.small { animation: galaxy-drift-far 280s linear infinite; opacity: 0.7; }
+            #canvas-container .star-layer.medium { animation: galaxy-drift-mid 190s linear infinite reverse; opacity: 0.65; }
+            #canvas-container .star-layer.large { animation: galaxy-drift-near 130s linear infinite, galaxy-twinkle 5s ease-in-out infinite alternate; opacity: 0.9; }
+            @keyframes galaxy-drift-far {
+                from { transform: translate3d(0, 0, -520px); }
+                to { transform: translate3d(-5%, -50%, -520px); }
+            }
+            @keyframes galaxy-drift-mid {
+                from { transform: translate3d(0, 0, -280px); }
+                to { transform: translate3d(4%, -50%, -280px); }
+            }
+            @keyframes galaxy-drift-near {
+                from { transform: translate3d(0, 0, -80px); }
+                to { transform: translate3d(-3%, -50%, -80px); }
             }
             @keyframes galaxy-twinkle {
                 from { opacity: 0.45; }
@@ -239,7 +225,7 @@
                 padding-top: 78px;
                 padding-bottom: 110px;
                 scroll-behavior: smooth;
-                background: var(--bg-color);
+                background: transparent;
             }
             #mobile-viewport::-webkit-scrollbar { width: 0px; }
             header {
@@ -1402,13 +1388,19 @@
             const viewport = document.getElementById("mobile-viewport");
             const mainHeaderEl = document.getElementById("main-header");
             const searchBarWrapEl = document.getElementById("search-bar-wrap");
+            let scrollTicking = false;
             viewport.addEventListener("scroll", () => {
-                const activePage = document.querySelector(".page-view.active");
-                if (activePage) scrollPos[activePage.id] = viewport.scrollTop;
-                const isScrolled = viewport.scrollTop > 8;
-                if (mainHeaderEl) mainHeaderEl.classList.toggle("scrolled", isScrolled);
-                if (searchBarWrapEl) searchBarWrapEl.classList.toggle("scrolled", isScrolled);
-            });
+                if (scrollTicking) return;
+                scrollTicking = true;
+                requestAnimationFrame(() => {
+                    const activePage = document.querySelector(".page-view.active");
+                    if (activePage) scrollPos[activePage.id] = viewport.scrollTop;
+                    const isScrolled = viewport.scrollTop > 8;
+                    if (mainHeaderEl) mainHeaderEl.classList.toggle("scrolled", isScrolled);
+                    if (searchBarWrapEl) searchBarWrapEl.classList.toggle("scrolled", isScrolled);
+                    scrollTicking = false;
+                });
+            }, { passive: true });
             function restoreScroll(pageId) {
                 setTimeout(() => {
                     if (scrollPos[pageId] !== undefined) viewport.scrollTop = scrollPos[pageId];
@@ -2191,11 +2183,17 @@
                 if (globalCats) {
                     // Flat category list — no sub-category ("sector") nesting anymore.
                     const sorted = Object.entries(globalCats).sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
+                    // Build the whole batch as one string, then write it once —
+                    // innerHTML += inside a loop forces the browser to re-parse
+                    // and re-render everything already on screen on every single
+                    // iteration, which is the classic cause of visible list jank.
+                    let out = [];
                     sorted.forEach(([k, c]) => {
                         if (c.active !== false) {
-                            grid.innerHTML += ` <div class="cat-card" onclick="openCategory('${k}', '${c.name}')"><div class="cat-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" alt="${c.name}" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="cat-info"><div class="cat-name">${c.name}</div><i class="fas fa-chevron-right cat-arrow"></i></div></div>`;
+                            out.push(` <div class="cat-card" onclick="openCategory('${k}', '${c.name}')"><div class="cat-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" alt="${c.name}" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="cat-info"><div class="cat-name">${c.name}</div><i class="fas fa-chevron-right cat-arrow"></i></div></div>`);
                         }
                     });
+                    grid.innerHTML = out.join("");
                 }
                 if (grid.innerHTML === "")
                     grid.innerHTML = '<p style="text-align:center; color:var(--text-sub);">Empty</p>';
@@ -2225,6 +2223,7 @@
                     // Categories are flat now — always render this category's products directly.
                     {
                         const apps = allApps.filter((a) => (a.category || "").toLowerCase() === name.toLowerCase());
+                        let out = [];
                         apps.forEach((app) => {
                             const now = Date.now();
                             const updateTime = app.updatedAt || 0;
@@ -2238,8 +2237,9 @@
                             const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
                                 ? `<div style="position:absolute; top:10px; right:45px; z-index:5;"><img src="bluetick.png" style="width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));"></div>` : '';
                             const tagsHtml = getTagsHtml(app);
-                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${badge} ${ownedHtml} <div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                            out.push(` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${badge} ${ownedHtml} <div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                         });
+                        grid.innerHTML = out.join("");
                         if (apps.length === 0)
                             grid.innerHTML =
                                 '<p style="grid-column:1/-1; text-align:center; color:#666;">No apps found.</p>';
@@ -2260,9 +2260,11 @@
                         resPage.classList.add("active");
                         grid.innerHTML = "";
                         const hits = allApps.filter((a) => a.title.toLowerCase().includes(val));
+                        let out = [];
                         hits.forEach((app) => {
-                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                            out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                         });
+                        grid.innerHTML = out.join("");
                         if (hits.length === 0)
                             grid.innerHTML = '<p style="text-align:center; width:100%;">No results</p>';
                     } else {
@@ -2466,9 +2468,11 @@
                 grid.innerHTML = "";
                 if (currentUser && currentUser.wishlist) {
                     const list = allApps.filter((a) => currentUser.wishlist.includes(a.id));
+                    let out = [];
                     list.forEach((app) => {
-                        grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="wish-icon active" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                        out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="wish-icon active" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                     });
+                    grid.innerHTML = out.join("");
                 } else {
                     grid.innerHTML = '<p style="text-align:center; color:var(--text-sub);">Empty</p>';
                 }
