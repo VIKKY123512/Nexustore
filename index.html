@@ -407,24 +407,7 @@
                 transition: none;
             }
             .cat-card:hover .cat-img-wrap img { transform: none; }
-            .cat-info {
-                padding: 14px 18px;
-                display: flex;
-                justify-content: flex-start;
-                align-items: center;
-                background: var(--card-bg);
-                border-top: 1px solid var(--glass-border);
-            }
-            .cat-name {
-                font-size: 1rem;
-                font-weight: 700;
-                color: var(--text-main);
-                text-align: left;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                width: 100%;
-            }
+            /* .cat-info / .cat-name label removed — banner cards show image only now. */
             /* Product grid — 3 per row, flat Play Store style: no card chrome,
                just a big rounded cover image with the title/price underneath. */
             .grid {
@@ -457,7 +440,6 @@
             }
             .skel-img { position: relative; z-index: 2; opacity: 0; transition: opacity 0.25s ease; }
             .skel-img.loaded { opacity: 1; }
-            .banner-container { width: 100%; margin-bottom: 20px; position: relative; display: none; }
             #cat-page-grid .card { position: relative; }
             .chat-bubble {
                 padding: 12px 16px;
@@ -963,6 +945,7 @@
                             </div>
                         </div>
                     </div>
+                    <div id="home-sections"></div>
                 </div>
                 <div id="search-results" class="page-view">
                     <div class="clickable-header" onclick="goHome()">
@@ -2168,6 +2151,7 @@
             db.ref("categories").on("value", (s) => {
                 globalCats = s.val() || {};
                 renderCategories(null);
+                renderHomeSections();
             });
             db.ref("apps").on("value", (s) => {
                 if (s.val()) {
@@ -2183,7 +2167,37 @@
                             return safeApp;
                         });
                 }
+                renderHomeSections();
             });
+            // Groups every product on the home feed under its own category
+            // heading (Play Store / App Store "Top in <Category>" style), so
+            // every product stays visibly tied to its related category instead
+            // of only surfacing once you tap into that category's own page.
+            function renderHomeSections() {
+                const container = document.getElementById("home-sections");
+                if (!container || !globalCats || !allApps.length) return;
+                let html = "";
+                const sortedCats = Object.entries(globalCats)
+                    .filter(([k, c]) => c.active !== false)
+                    .sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
+                sortedCats.forEach(([k, c]) => {
+                    const apps = allApps.filter((a) => (a.category || "").toLowerCase() === c.name.toLowerCase());
+                    if (apps.length === 0) return;
+                    const shown = apps.slice(0, 6);
+                    const safeName = c.name.replace(/'/g, "\\'");
+                    html += `<div class="section-title" style="display:flex; justify-content:space-between; align-items:center; margin-top:24px;">
+                        <span>${c.name}</span>
+                        <span style="font-size:0.72rem; font-weight:700; color:var(--primary); cursor:pointer;" onclick="openCategory('${k}', '${safeName}')">VIEW ALL</span>
+                    </div>
+                    <div class="grid">`;
+                    shown.forEach((app) => {
+                        const tagsHtml = getTagsHtml(app);
+                        html += `<div class="card" id="home-card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                    });
+                    html += `</div>`;
+                });
+                container.innerHTML = html;
+            }
             db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));            
             function renderCategories() {
                 const grid = document.getElementById("cat-grid");
@@ -2193,7 +2207,7 @@
                     const sorted = Object.entries(globalCats).sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
                     sorted.forEach(([k, c]) => {
                         if (c.active !== false) {
-                            grid.innerHTML += ` <div class="cat-card" onclick="openCategory('${k}', '${c.name}')"><div class="cat-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="cat-info"><div class="cat-name">${c.name}</div></div></div>`;
+                            grid.innerHTML += ` <div class="cat-card" onclick="openCategory('${k}', '${c.name}')"><div class="cat-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" alt="${c.name}" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div></div>`;
                         }
                     });
                 }
@@ -2238,7 +2252,7 @@
                             const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
                                 ? `<div style="position:absolute; top:10px; right:45px; z-index:5;"><img src="bluetick.png" style="width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));"></div>` : '';
                             const tagsHtml = getTagsHtml(app);
-                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${badge} ${ownedHtml} <div class="wish-icon" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                            grid.innerHTML += ` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${badge} ${ownedHtml} <div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
                         });
                         if (apps.length === 0)
                             grid.innerHTML =
@@ -2261,7 +2275,7 @@
                         grid.innerHTML = "";
                         const hits = allApps.filter((a) => a.title.toLowerCase().includes(val));
                         hits.forEach((app) => {
-                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="wish-icon" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                            grid.innerHTML += `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
                         });
                         if (hits.length === 0)
                             grid.innerHTML = '<p style="text-align:center; width:100%;">No results</p>';
@@ -2726,6 +2740,13 @@
                 event.target.value = ''; // Reset input
             }
             
+            // Returns "wish-icon active" when this product is already in the
+            // logged-in user's wishlist, so the heart renders filled on first
+            // paint everywhere a product card appears (home sections, category
+            // page, search results) — not just after the user taps it.
+            function wishIconClass(appId) {
+                return currentUser && currentUser.wishlist && currentUser.wishlist.includes(appId) ? "wish-icon active" : "wish-icon";
+            }
             function getPriceHtml(app) {
                 if (!app.price || app.price <= 0) {
                     return `<div class="price-row"><span class="price-current">FREE</span></div>`;
