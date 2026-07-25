@@ -65,39 +65,39 @@
                 -webkit-tap-highlight-color: transparent;
             }
             :root {
-                color-scheme: dark;
-                /* --- Core surfaces (galaxy dark theme — permanent, not OS-preference-based
-                     anymore, since app content backgrounds are now transparent so the
-                     cosmic starfield shows through; a light theme would be unreadable
-                     against that backdrop) --- */
-                --bg-color: #121218;
+                color-scheme: light;
+                /* --- Core surfaces (light purple theme — content surfaces are still
+                     opaque cards; the starfield behind them is now a soft light-purple
+                     nebula instead of black space, so star dots switch to a darker
+                     tone below to stay visible) --- */
+                --bg-color: #F4F1FC;
                 --bg-gradient: none;
-                --surface: #1C1B22;
-                --surface-variant: #26252E;
-                --surface-container: #201F27;
-                --surface-container-high: #2C2B35;
+                --surface: #FFFFFF;
+                --surface-variant: #ECE6FA;
+                --surface-container: #F6F2FD;
+                --surface-container-high: #E4DCF7;
 
                 /* --- Text --- */
-                --text-main: #EDEBF4;
-                --text-sub: #B6B3C2;
+                --text-main: #241F38;
+                --text-sub: #6A6280;
 
                 /* --- Brand --- */
-                --primary: #BFC0FF;
-                --primary-container: #38399B;
-                --on-primary: #1A1B6E;
-                --secondary: #FFB29A;
-                --secondary-container: #6B3524;
+                --primary: #6D5AE0;
+                --primary-container: #E1DAFB;
+                --on-primary: #FFFFFF;
+                --secondary: #E0654A;
+                --secondary-container: #FCE3DC;
 
                 /* --- Legacy names kept for compatibility, flat values --- */
                 --glass-header: var(--surface);
-                --glass-border: #363540;
+                --glass-border: #DCD3F2;
                 --card-bg: var(--surface);
                 --modal-bg: var(--surface);
                 --accent-gradient: linear-gradient(135deg, #6D6FFF 0%, #8A8CFF 100%);
                 --premium-gradient: linear-gradient(135deg, #9A7BFF 0%, #FF8A66 100%);
-                --success: #6CDA9E;
-                --danger: #FF6B60;
-                --update-badge: #6FB6F1;
+                --success: #2FAE72;
+                --danger: #E23B34;
+                --update-badge: #2E86D6;
 
                 /* --- Shape --- */
                 --radius-lg: 24px;
@@ -105,9 +105,9 @@
                 --radius-sm: 12px;
 
                 /* --- Elevation (flat, no glow) --- */
-                --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 6px rgba(0, 0, 0, 0.3);
-                --shadow-raised: 0 2px 10px rgba(0, 0, 0, 0.4);
-                --glow-accent: 0 1px 2px rgba(0, 0, 0, 0.3);
+                --shadow-card: 0 1px 2px rgba(109, 90, 224, 0.08), 0 1px 6px rgba(109, 90, 224, 0.08);
+                --shadow-raised: 0 4px 16px rgba(109, 90, 224, 0.14);
+                --glow-accent: 0 1px 2px rgba(109, 90, 224, 0.1);
 
                 --font-body: "Outfit", sans-serif;
             }
@@ -154,7 +154,7 @@
             html {
                 margin: 0;
                 height: 100%;
-                background: #000000; /* matches the galaxy backdrop — no line can ever peek through on curved/notched screens */
+                background: #F4F1FC; /* matches the light-purple backdrop — no line can ever peek through on curved/notched screens */
             }
             body {
                 margin: 0;
@@ -184,39 +184,34 @@
                 z-index: -1;
                 pointer-events: none;
                 overflow: hidden;
-                perspective: 900px;
-                background: radial-gradient(ellipse 120% 55% at 28% 18%, rgba(90, 60, 150, 0.10), transparent 55%),
-                    linear-gradient(160deg, #000000 0%, #050308 40%, #07040f 70%, #020103 100%);
+                background: radial-gradient(ellipse 120% 55% at 28% 18%, rgba(160, 130, 240, 0.16), transparent 55%),
+                    linear-gradient(160deg, #F4F1FC 0%, #EFE9FA 40%, #E9E1F8 70%, #E3D9F6 100%);
             }
+            /* Flat 2D star layers — no perspective/translate3d, just plain
+               X/Y drift on the compositor (still GPU-cheap, just no depth). */
             #canvas-container .star-layer {
                 position: absolute;
                 left: 0;
                 top: 0;
                 width: 100%;
                 height: 200%;
-                border-radius: 50%;
                 background: transparent;
-                transform-style: preserve-3d;
                 will-change: transform;
-                backface-visibility: hidden;
             }
-            /* Three depth planes (far / mid / near) drifting at different
-               speeds and Z-depths — the parallax between them is what reads
-               as 3D rather than a flat scrolling pattern. */
             #canvas-container .star-layer.small { animation: galaxy-drift-far 280s linear infinite; opacity: 0.7; }
             #canvas-container .star-layer.medium { animation: galaxy-drift-mid 190s linear infinite reverse; opacity: 0.65; }
             #canvas-container .star-layer.large { animation: galaxy-drift-near 130s linear infinite, galaxy-twinkle 5s ease-in-out infinite alternate; opacity: 0.9; }
             @keyframes galaxy-drift-far {
-                from { transform: translate3d(0, 0, -520px); }
-                to { transform: translate3d(-5%, -50%, -520px); }
+                from { transform: translate(0, 0); }
+                to { transform: translate(-5%, -50%); }
             }
             @keyframes galaxy-drift-mid {
-                from { transform: translate3d(0, 0, -280px); }
-                to { transform: translate3d(4%, -50%, -280px); }
+                from { transform: translate(0, 0); }
+                to { transform: translate(4%, -50%); }
             }
             @keyframes galaxy-drift-near {
-                from { transform: translate3d(0, 0, -80px); }
-                to { transform: translate3d(-3%, -50%, -80px); }
+                from { transform: translate(0, 0); }
+                to { transform: translate(-3%, -50%); }
             }
             @keyframes galaxy-twinkle {
                 from { opacity: 0.45; }
@@ -484,13 +479,17 @@
             .prod-img-wrap {
                 width: 100%;
                 aspect-ratio: 3 / 4;
-                border-radius: var(--radius-md);
+                border-radius: 20px;
                 overflow: hidden;
                 background: var(--surface-variant);
+                border: 1px solid var(--glass-border);
                 position: relative;
                 margin-bottom: 8px;
-                transition: box-shadow 0.15s ease;
+                box-shadow: var(--shadow-card);
+                transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
             }
+            .card:active .prod-img-wrap { transform: scale(0.97); }
+            .card:hover .prod-img-wrap { border-color: var(--primary); }
             .card img {
                 width: 100%;
                 height: 100%;
@@ -548,8 +547,10 @@
                 transform: translateX(-50%);
                 width: 92%;
                 max-width: 400px;
-                background: var(--surface);
-                border: 1px solid var(--glass-border);
+                background: rgba(255, 255, 255, 0.6);
+                -webkit-backdrop-filter: blur(22px) saturate(160%);
+                backdrop-filter: blur(22px) saturate(160%);
+                border: 1px solid rgba(109, 90, 224, 0.12);
                 border-radius: 40px;
                 padding: 10px 26px;
                 display: flex;
@@ -557,6 +558,9 @@
                 align-items: center;
                 box-shadow: var(--shadow-raised);
                 z-index: 1000;
+            }
+            @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+                .bottom-nav { background: var(--surface); }
             }
             .nav-btn {
                 color: var(--text-sub);
@@ -604,6 +608,40 @@
             .modal.active .modal-content { animation: fadeView 0.2s ease; }
             @keyframes popIn { to { transform: scale(1); opacity: 1; } }
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+            /* --- Real popup-window style, used only on the pages you flagged
+               (Secure Payment, Product Detail, Join Community) — dim backdrop,
+               centered floating rounded card, tap-outside-to-close. Every other
+               modal (auth, profile, support) is untouched and still opens as a
+               full page. --- */
+            .modal.modal-popup {
+                background: rgba(20, 15, 40, 0.55);
+                -webkit-backdrop-filter: blur(6px);
+                backdrop-filter: blur(6px);
+                align-items: center;
+                padding: 20px;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+            }
+            .modal.modal-popup .modal-content {
+                width: 100%;
+                max-width: 440px;
+                max-height: 85vh;
+                min-height: 0;
+                border-radius: 24px;
+                box-shadow: var(--shadow-raised);
+                padding: 20px 20px 24px;
+            }
+            .modal.modal-popup .modal-header {
+                margin: -20px -20px 16px;
+                border-radius: 24px 24px 0 0;
+            }
+            .modal.modal-popup.active .modal-content {
+                animation: popupCardIn 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+            }
+            @keyframes popupCardIn {
+                from { opacity: 0; transform: translateY(16px) scale(0.97); }
+                to { opacity: 1; transform: translateY(0) scale(1); }
+            }
             .modal-header {
                 display: flex;
                 align-items: center;
@@ -702,6 +740,14 @@
             .page-view { display: none; }
             .page-view.active { display: block; animation: fadeView 0.2s ease; }
             @keyframes fadeView { from { opacity: 0; } to { opacity: 1; } }
+
+            /* TABLET RESPONSIVENESS — fills the gap between phones and desktop
+               instead of staying stuck at a narrow 480px column. */
+            @media (min-width: 641px) and (max-width: 1023px) {
+                #mobile-viewport { max-width: 720px; }
+                .grid { grid-template-columns: repeat(4, 1fr); }
+                header { max-width: 720px; padding: 16px 28px; }
+            }
 
             /* DESKTOP RESPONSIVENESS */
             @media (min-width: 1024px) {
@@ -1091,8 +1137,8 @@
                 </div>
             </div>
         </div>
-        <div id="modal-detail" class="modal">
-            <div class="modal-content">
+        <div id="modal-detail" class="modal modal-popup" onclick="if(event.target === this) toggleModal('modal-detail', false)">
+            <div class="modal-content" onclick="event.stopPropagation()">
                 <div class="modal-header">
                     <button class="close-btn" onclick="toggleModal('modal-detail', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
@@ -1247,8 +1293,8 @@
                 </div>
             </div>
         </div>
-        <div id="modal-info" class="modal">
-            <div class="modal-content">
+        <div id="modal-info" class="modal modal-popup" onclick="if(event.target === this) toggleModal('modal-info', false)">
+            <div class="modal-content" onclick="event.stopPropagation()">
                 <div class="modal-header">
                     <div class="modal-title" id="info-title"></div>
                     <button class="close-btn" onclick="toggleModal('modal-info', false)"><i class="fas fa-arrow-left"></i></button>
@@ -1292,8 +1338,8 @@
         </div>
 
         <!-- Payment Modal -->
-        <div id="modal-payment" class="modal">
-            <div class="modal-content">
+        <div id="modal-payment" class="modal modal-popup" onclick="if(event.target === this) toggleModal('modal-payment', false)">
+            <div class="modal-content" onclick="event.stopPropagation()">
                 <div class="modal-header">
                     <div class="modal-title">Secure Payment</div>
                     <button class="close-btn" onclick="toggleModal('modal-payment', false)"><i class="fas fa-arrow-left"></i></button>
@@ -1528,7 +1574,11 @@
             let activeGateways = { tranzupi: true, spacepay: false }; // Default state
             
             db.ref("config/gateways").on("value", (s) => {
-                if (s.val()) activeGateways = s.val();
+                // Same bug class as the products listener above: only updating
+                // inside `if (s.val())` meant a fully-cleared gateways node in the
+                // DB left the app running on stale/default gateway state forever.
+                // Fail closed (no gateway) rather than silently keep an old one active.
+                activeGateways = s.val() || { tranzupi: false, spacepay: false };
             });
 
             // 🔴 IMPORTANT: IF YOUR VERCEL DOMAIN IS DIFFERENT, CHANGE IT HERE!
@@ -1925,12 +1975,14 @@
                 `;
                 overlay.style.display = "flex";
 
-                // Auto Trigger Download Instantly
-                if (app) {
-                    setTimeout(() => {
-                        handleDownload(app);
-                    }, 1500);
-                }
+                // NOTE: this used to also auto-trigger handleDownload(app) via
+                // setTimeout() to start the download instantly. Removed — window.open()
+                // inside a setTimeout callback is outside the direct user-gesture chain,
+                // so browsers (especially Chrome Custom Tabs, which is what most users
+                // are viewing this site through) silently popup-block it. It also risked
+                // burning two download-quota hits for one purchase if the visible
+                // "Download Now" button below was tapped as well. The button is the
+                // single reliable path now.
 
                 setTimeout(() => {
                     if (overlay.style.display !== "none") closeSuccessOverlay();
@@ -2022,8 +2074,19 @@
                 });
                 
                 document.getElementById("payment-order-id").innerText = orderId;
-                toggleModal("modal-payment", false);
-                
+
+                // BUGFIX: this used to call toggleModal("modal-payment", false) here,
+                // closing the popup immediately on tap — before we even knew if the
+                // backend call would succeed. On a slow network or a backend error,
+                // the popup just vanished with no payment link and no visible error,
+                // which read as "the popup isn't working." Now it stays open and shows
+                // a loading state until we actually have a redirect to send you to.
+                const gatewayButtons = document.querySelectorAll("#gateway-buttons-container button");
+                gatewayButtons.forEach(b => { b.disabled = true; b.style.opacity = "0.6"; });
+                const clickedBtn = document.querySelector(`#gateway-buttons-container button[onclick*="${gateway}"]`);
+                const originalBtnHtml = clickedBtn ? clickedBtn.innerHTML : null;
+                if (clickedBtn) clickedBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting to payment gateway...';
+
                 // 2. Alert user and trigger the API call to Vercel
                 showToast("Generating secure payment link...", "info");
                 
@@ -2044,16 +2107,21 @@
                     console.error("Backend Error:", err);
                     showToast("Payment Server is unreachable. Check your Vercel deployment.", "error");
                     db.ref("orders/" + orderId).update({ status: "cancelled" }); // Cleanup
+                    gatewayButtons.forEach(b => { b.disabled = false; b.style.opacity = "1"; });
+                    if (clickedBtn && originalBtnHtml) clickedBtn.innerHTML = originalBtnHtml;
                     return;
                 }
 
                 if (data.paymentUrl) {
-                    // Success! Backend gave us a brand new link.
-                    // CRITICAL FIX: Use location.href instead of window.open to prevent the double-tab loop!
+                    // Success! Backend gave us a brand new link. The page is about to
+                    // navigate away, so it's safe to close the popup right before that.
+                    toggleModal("modal-payment", false);
                     window.location.href = data.paymentUrl;
                 } else {
                     showToast("Error generating link: " + (data.error || "Unknown error"), "error");
                     db.ref("orders/" + orderId).update({ status: "cancelled" }); // Cleanup
+                    gatewayButtons.forEach(b => { b.disabled = false; b.style.opacity = "1"; });
+                    if (clickedBtn && originalBtnHtml) clickedBtn.innerHTML = originalBtnHtml;
                 }
             }
             function closeSuccessOverlay() {
@@ -2181,18 +2249,25 @@
                 renderCategories(null);
             });
             db.ref("apps").on("value", (s) => {
-                if (s.val()) {
-                    const rawApps = s.val();
-                    // STRONG SECURITY: Strip download links from global memory to prevent console scraping bypasses.
-                    // Also hide anything the admin has marked Inactive - it should not be visible,
-                    // searchable, or downloadable by regular users.
-                    allApps = Object.values(rawApps)
-                        .filter((app) => app.active !== false)
-                        .map(app => {
-                            const safeApp = { ...app };
-                            delete safeApp.downloadLink; 
-                            return safeApp;
-                        });
+                // BUGFIX: this used to only run inside `if (s.val())`, so when the admin
+                // deleted products and the "apps" node became empty/null, allApps kept
+                // its old in-memory value forever — deleted products kept showing up
+                // in search and category pages until a hard refresh (and sometimes
+                // not even then, since the listener never fired again with data).
+                // Always recompute allApps from whatever is currently in the DB.
+                const rawApps = s.val() || {};
+                allApps = Object.values(rawApps)
+                    .filter((app) => app.active !== false)
+                    .map(app => {
+                        const safeApp = { ...app };
+                        delete safeApp.downloadLink;
+                        return safeApp;
+                    });
+                // Re-render whatever product grid is currently on screen so a delete
+                // is reflected immediately without needing a manual refresh.
+                const searchVal = document.getElementById("search-input") ? document.getElementById("search-input").value : "";
+                if (searchVal && searchVal.trim()) {
+                    document.getElementById("search-input").dispatchEvent(new Event("input"));
                 }
             });
             db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));            
@@ -2456,6 +2531,14 @@
 
                 showToast("Generating Secure Link...", "info");
 
+                // Open the tab synchronously, right here on the click — this is still
+                // inside the user-gesture window, so it can't be popup-blocked. We fill
+                // in the real URL once the backend responds below. Calling window.open()
+                // AFTER the two awaits (like this used to) falls outside that gesture
+                // window on strict browsers / in-app browsers and gets silently blocked,
+                // which is indistinguishable from "the download button doesn't work."
+                const downloadTab = window.open("", "_blank");
+
                 // STRONG SECURITY: the real download URL never touches the client-readable
                 // database. The backend independently re-checks ownership/payment status (and
                 // the free-tier daily cap) with the Admin SDK before it will ever hand back the
@@ -2469,12 +2552,15 @@
                     });
                     const data = await res.json();
                     if (!data.downloadUrl) {
+                        if (downloadTab) downloadTab.close();
                         return showToast(data.error || "Download link unavailable", "error");
                     }
-                    window.open(data.downloadUrl, "_blank");
+                    if (downloadTab) downloadTab.location.href = data.downloadUrl;
+                    else window.location.href = data.downloadUrl; // popup was blocked anyway — fall back to same-tab navigation rather than failing silently
                     showToast("Download Started!", "success");
                 } catch (err) {
                     console.error("Download Error:", err);
+                    if (downloadTab) downloadTab.close();
                     showToast("Download server unreachable. Try again.", "error");
                 }
             }
@@ -2674,11 +2760,11 @@
                 db.ref("site_settings/socials").once("value", s => {
                     const soc = s.val() || {};
                     let html = `<div id="social-cards-container">`;
-                    if(soc.telegram) html += `<div class="social-card" onclick="window.open('${soc.telegram}')"><div class="social-card-content"><i class="fab fa-telegram" style="color:#0088cc;"></i><h4>Telegram</h4><p>Join Group</p></div></div>`;
-                    if(soc.whatsapp) html += `<div class="social-card" onclick="window.open('${soc.whatsapp}')"><div class="social-card-content"><i class="fab fa-whatsapp" style="color:#25D366;"></i><h4>WhatsApp</h4><p>Connect</p></div></div>`;
-                    if(soc.instagram) html += `<div class="social-card" onclick="window.open('${soc.instagram}')"><div class="social-card-content"><i class="fab fa-instagram" style="background:linear-gradient(45deg, #f09433, #dc2743, #bc1888); -webkit-background-clip: text; color: transparent;"></i><h4>Instagram</h4><p>Follow Us</p></div></div>`;
-                    if(soc.youtube) html += `<div class="social-card" onclick="window.open('${soc.youtube}')"><div class="social-card-content"><i class="fab fa-youtube" style="color:#FF0000;"></i><h4>YouTube</h4><p>Subscribe</p></div></div>`;
-                    if(soc.discord) html += `<div class="social-card" onclick="window.open('${soc.discord}')"><div class="social-card-content"><i class="fab fa-discord" style="color:#7289da;"></i><h4>Discord</h4><p>Community</p></div></div>`;
+                    if(soc.telegram) html += `<div class="social-card" onclick="window.location.href='${soc.telegram}'"><div class="social-card-content"><i class="fab fa-telegram" style="color:#0088cc;"></i><h4>Telegram</h4><p>Join Group</p></div></div>`;
+                    if(soc.whatsapp) html += `<div class="social-card" onclick="window.location.href='${soc.whatsapp}'"><div class="social-card-content"><i class="fab fa-whatsapp" style="color:#25D366;"></i><h4>WhatsApp</h4><p>Connect</p></div></div>`;
+                    if(soc.instagram) html += `<div class="social-card" onclick="window.location.href='${soc.instagram}'"><div class="social-card-content"><i class="fab fa-instagram" style="background:linear-gradient(45deg, #f09433, #dc2743, #bc1888); -webkit-background-clip: text; color: transparent;"></i><h4>Instagram</h4><p>Follow Us</p></div></div>`;
+                    if(soc.youtube) html += `<div class="social-card" onclick="window.location.href='${soc.youtube}'"><div class="social-card-content"><i class="fab fa-youtube" style="color:#FF0000;"></i><h4>YouTube</h4><p>Subscribe</p></div></div>`;
+                    if(soc.discord) html += `<div class="social-card" onclick="window.location.href='${soc.discord}'"><div class="social-card-content"><i class="fab fa-discord" style="color:#7289da;"></i><h4>Discord</h4><p>Community</p></div></div>`;
                     html += `</div>`;
                     document.getElementById('info-title').innerText = "Join Community";
                     document.getElementById('info-body').innerHTML = html;
@@ -2785,7 +2871,7 @@
                     for (let i = 0; i < count; i++) {
                         const x = Math.floor(Math.random() * w);
                         const y = Math.floor(Math.random() * h);
-                        shadows.push(`${x}px ${y}px 0 rgba(255,255,255,${colorAlpha})`);
+                        shadows.push(`${x}px ${y}px 0 rgba(109, 90, 224, ${colorAlpha})`);
                     }
                     return { shadow: shadows.join(","), size: sizePx };
                 }
