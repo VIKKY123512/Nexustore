@@ -139,11 +139,6 @@
             }
             .menu-link i { color: var(--primary); width: 20px; text-align: center; }
             .menu-link:active { background: var(--surface-variant); }
-            .prod-tags { display: flex; gap: 5px; position: absolute; bottom: 10px; left: 10px; z-index: 5;}
-            .ptag { font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; }
-            .ptag-free { background: var(--success); color: #fff; }
-            .ptag-paid { background: var(--secondary); color: #fff; }
-            .ptag-premium { background: var(--premium-gradient); color: #fff; }
             .chat-ai-chips { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
             .chat-chip {
                 background: var(--primary-container); border: none; color: var(--primary);
@@ -152,6 +147,8 @@
             html {
                 margin: 0;
                 height: 100%;
+                overflow: hidden;
+                overscroll-behavior: none;
                 background: #0B1220; /* matches the dark navy backdrop — no line can ever peek through on curved/notched screens */
             }
             body {
@@ -164,6 +161,7 @@
                 display: flex;
                 justify-content: center;
                 overflow: hidden;
+                overscroll-behavior: none;
                 transition: background 0.3s ease, color 0.3s ease;
             }
             /* Galaxy starfield — the actual visible cosmic background. Runs on
@@ -491,7 +489,7 @@
                 border-radius: 16px;
                 overflow: hidden;
                 background: var(--surface-variant);
-                border: 1px solid var(--glass-border);
+                border: 1px solid rgba(59, 130, 246, 0.18);
                 position: relative;
                 margin-bottom: 8px;
                 box-shadow: var(--shadow-card);
@@ -499,16 +497,12 @@
             }
             .card:active .prod-img-wrap { transform: scale(0.97); }
             .card:hover .prod-img-wrap { border-color: var(--primary); }
-            /* Quick "Buy Now" pill + discount badge, Steam-card style */
-            .discount-badge {
-                position: absolute; top: 10px; left: 10px; z-index: 5;
-                background: var(--danger); color: #fff; font-size: 0.65rem; font-weight: 800;
-                padding: 3px 8px; border-radius: 8px; letter-spacing: 0.3px;
-            }
+            /* Quick "Buy Now" pill, Steam-card style — the discount badge now lives
+               in the unified .badge-stack above, one corner, no overlap. */
             .quick-buy-btn {
                 position: absolute; bottom: 8px; right: 8px; z-index: 5;
                 background: var(--accent-gradient); color: #fff; border: none;
-                font-size: 0.7rem; font-weight: 700; padding: 6px 10px; border-radius: 10px;
+                font-size: 0.7rem; font-weight: 700; padding: 6px 11px; border-radius: 12px;
                 display: flex; align-items: center; gap: 5px; cursor: pointer;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
                 opacity: 0; transform: translateY(4px);
@@ -537,8 +531,8 @@
                 pointer-events: none;
             }
             .card h3 {
-                font-size: 0.8rem;
-                font-weight: 600;
+                font-size: 0.84rem;
+                font-weight: 700;
                 margin: 0 0 4px;
                 line-height: 1.3;
                 color: var(--text-main);
@@ -556,13 +550,31 @@
                 margin-top: auto;
                 flex-wrap: wrap;
             }
-            .price-current { font-size: 0.85rem; font-weight: 800; color: var(--text-main); }
+            .price-current {
+                font-size: 0.88rem; font-weight: 800;
+                background: var(--accent-gradient);
+                -webkit-background-clip: text; background-clip: text; color: transparent;
+            }
             .price-original {
                 font-size: 0.72rem;
                 font-weight: 500;
                 color: var(--text-sub);
                 text-decoration: line-through;
             }
+            .badge-stack {
+                position: absolute; top: 8px; left: 8px; z-index: 5;
+                display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+            }
+            .mini-badge {
+                font-size: 0.56rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;
+                letter-spacing: 0.2px; line-height: 1.4; white-space: nowrap; color: #fff;
+                -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+            }
+            .mini-badge.owned { background: rgba(34, 197, 94, 0.85); }
+            .mini-badge.discount { background: rgba(239, 68, 68, 0.9); }
+            .mini-badge.new { background: rgba(34, 197, 94, 0.85); }
+            .mini-badge.updated { background: rgba(6, 182, 212, 0.85); }
+            .mini-badge.hot { background: rgba(234, 88, 12, 0.9); }
             .wish-icon {
                 position: absolute; top: 8px; right: 8px; z-index: 5;
                 background: rgba(20, 20, 30, 0.45);
@@ -573,13 +585,6 @@
             .wish-icon i { transition: color 0.2s ease; }
             .wish-icon.active { background: var(--secondary-container); }
             .wish-icon.active i { color: var(--secondary); }
-            .app-badge {
-                position: absolute; top: 10px; left: 10px; z-index: 5;
-                background: var(--success); color: #fff;
-                font-size: 0.62rem; font-weight: 800; padding: 3px 9px; border-radius: 8px;
-                box-shadow: none; text-transform: uppercase; letter-spacing: 0.4px;
-            }
-            .app-badge.update { background: var(--update-badge); color: #fff; box-shadow: none; }
             .bottom-nav {
                 position: fixed;
                 bottom: calc(18px + env(safe-area-inset-bottom, 0px));
@@ -2359,19 +2364,7 @@
                         const apps = allApps.filter((a) => (a.category || "").toLowerCase() === name.toLowerCase());
                         let out = [];
                         apps.forEach((app) => {
-                            const now = Date.now();
-                            const updateTime = app.updatedAt || 0;
-                            const isRecent = now - updateTime < 3 * 24 * 60 * 60 * 1000;
-                            let badge = "";
-                            if (isRecent) {
-                                const createdTime = app.createdAt || 0;
-                                if (updateTime - createdTime < 10000) badge = '<div class="app-badge">NEW</div>';
-                                else badge = '<div class="app-badge update">UPDATED</div>';
-                            }
-                            const ownedHtml = (currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified') 
-                                ? `<div style="position:absolute; top:10px; right:45px; z-index:5;"><img src="bluetick.png" style="width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(0,242,254,0.8));"></div>` : '';
-                            const tagsHtml = getTagsHtml(app);
-                            out.push(` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${badge} ${ownedHtml} <div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
+                            out.push(` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                         });
                         grid.innerHTML = out.join("");
                         if (apps.length === 0)
@@ -2396,7 +2389,7 @@
                         const hits = allApps.filter((a) => a.title.toLowerCase().includes(val));
                         let out = [];
                         hits.forEach((app) => {
-                            out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
+                            out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                         });
                         grid.innerHTML = out.join("");
                         if (hits.length === 0)
@@ -2615,7 +2608,7 @@
                     const list = allApps.filter((a) => currentUser.wishlist.includes(a.id));
                     let out = [];
                     list.forEach((app) => {
-                        out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="wish-icon active" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
+                        out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="wish-icon active" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
                     });
                     grid.innerHTML = out.join("");
                 } else {
@@ -2889,18 +2882,34 @@
                 const hasDiscount = app.mrp && app.mrp > app.price;
                 return `<div class="price-row">${hasDiscount ? `<span class="price-original">₹${app.mrp}</span>` : ""}<span class="price-current">₹${app.price}</span></div>`;
             }
+            function getCardBadgesHtml(app) {
+                // Single source of truth for every badge shown on a product card.
+                // Ranked by priority, capped at 2, always the same top-left stack —
+                // this is what stops "Trending / New / Premium / Verified / -97% / Paid"
+                // from all fighting for the same corner like they used to.
+                const candidates = [];
+                const isOwned = currentUserOrders && currentUserOrders[app.id] && currentUserOrders[app.id].status === 'verified';
+                if (isOwned) candidates.push('<span class="mini-badge owned"><i class="fas fa-check"></i> Owned</span>');
+                if (app.price > 0 && app.mrp && app.mrp > app.price) {
+                    const pct = Math.round((1 - app.price / app.mrp) * 100);
+                    candidates.push(`<span class="mini-badge discount">-${pct}%</span>`);
+                }
+                const now = Date.now();
+                const updateTime = app.updatedAt || 0;
+                if (now - updateTime < 3 * 24 * 60 * 60 * 1000) {
+                    const isNew = updateTime - (app.createdAt || 0) < 10000;
+                    candidates.push(isNew ? '<span class="mini-badge new">New</span>' : '<span class="mini-badge updated">Updated</span>');
+                }
+                if ((app.downloads || 0) > 100) candidates.push('<span class="mini-badge hot">🔥 Hot</span>');
+                if (candidates.length === 0) return '';
+                return `<div class="badge-stack">${candidates.slice(0, 2).join('')}</div>`;
+            }
             function getCardOverlayHtml(app) {
-                // Discount % badge (top-left) + a Steam-style quick "Buy Now" button
-                // (bottom-right) that purchases straight from the grid without opening
-                // the product detail page. Free products don't get a buy button here —
-                // those still route through openDetail since there's no payment to run.
-                const hasDiscount = app.price > 0 && app.mrp && app.mrp > app.price;
-                const pct = hasDiscount ? Math.round((1 - app.price / app.mrp) * 100) : 0;
-                const badgeHtml = hasDiscount ? `<div class="discount-badge">-${pct}%</div>` : "";
-                const buyHtml = (app.price && app.price > 0)
-                    ? `<button class="quick-buy-btn" onclick="event.stopPropagation(); spawnRipple(event); quickBuy('${app.id}')"><i class="fas fa-bolt"></i>Buy</button>`
-                    : "";
-                return badgeHtml + buyHtml;
+                // Just the quick-buy button now — badges live in getCardBadgesHtml().
+                // Free products skip the buy button since there's no payment to run;
+                // they route through openDetail() like everything else.
+                if (!(app.price && app.price > 0)) return "";
+                return `<button class="quick-buy-btn" onclick="event.stopPropagation(); spawnRipple(event); quickBuy('${app.id}')"><i class="fas fa-bolt"></i>Buy</button>`;
             }
             function quickBuy(id) {
                 const app = allApps.find(a => a.id === id);
@@ -2921,15 +2930,9 @@
                 btn.appendChild(dot);
                 setTimeout(() => dot.remove(), 500);
             }
-            function getTagsHtml(app) {
-                let tags = `<div class="prod-tags">`;
-                if(app.price && app.price > 500) tags += `<span class="ptag ptag-premium">PREMIUM</span>`;
-                else if(app.price && app.price > 0) tags += `<span class="ptag ptag-paid">PAID</span>`;
-                else tags += `<span class="ptag ptag-free">FREE</span>`;
-                if((app.downloads || 0) > 100) tags += `<span class="ptag" style="background:#0ea5e9; color:white;">🔥 HOT</span>`;
-                tags += `</div>`;
-                return tags;
-            }
+            // getTagsHtml (PAID/PREMIUM/FREE chips) removed — redundant with the price
+            // row already shown under every card, and was contributing to the badge
+            // clutter. Card status info now lives entirely in getCardBadgesHtml().
 
             // (Removed overriding syncUserUI so the permanent bluetick works correctly)
 
