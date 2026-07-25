@@ -407,7 +407,25 @@
                 transition: none;
             }
             .cat-card:hover .cat-img-wrap img { transform: none; }
-            /* .cat-info / .cat-name label removed — banner cards show image only now. */
+            .cat-info {
+                padding: 14px 18px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: var(--card-bg);
+                border-top: 1px solid var(--glass-border);
+            }
+            .cat-name {
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--text-main);
+                text-align: left;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                flex: 1;
+            }
+            .cat-arrow { color: var(--primary); font-size: 0.9rem; flex-shrink: 0; margin-left: 10px; }
             /* Product grid — 3 per row, flat Play Store style: no card chrome,
                just a big rounded cover image with the title/price underneath. */
             .grid {
@@ -945,7 +963,6 @@
                             </div>
                         </div>
                     </div>
-                    <div id="home-sections"></div>
                 </div>
                 <div id="search-results" class="page-view">
                     <div class="clickable-header" onclick="goHome()">
@@ -2151,7 +2168,6 @@
             db.ref("categories").on("value", (s) => {
                 globalCats = s.val() || {};
                 renderCategories(null);
-                renderHomeSections();
             });
             db.ref("apps").on("value", (s) => {
                 if (s.val()) {
@@ -2167,37 +2183,7 @@
                             return safeApp;
                         });
                 }
-                renderHomeSections();
             });
-            // Groups every product on the home feed under its own category
-            // heading (Play Store / App Store "Top in <Category>" style), so
-            // every product stays visibly tied to its related category instead
-            // of only surfacing once you tap into that category's own page.
-            function renderHomeSections() {
-                const container = document.getElementById("home-sections");
-                if (!container || !globalCats || !allApps.length) return;
-                let html = "";
-                const sortedCats = Object.entries(globalCats)
-                    .filter(([k, c]) => c.active !== false)
-                    .sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
-                sortedCats.forEach(([k, c]) => {
-                    const apps = allApps.filter((a) => (a.category || "").toLowerCase() === c.name.toLowerCase());
-                    if (apps.length === 0) return;
-                    const shown = apps.slice(0, 6);
-                    const safeName = c.name.replace(/'/g, "\\'");
-                    html += `<div class="section-title" style="display:flex; justify-content:space-between; align-items:center; margin-top:24px;">
-                        <span>${c.name}</span>
-                        <span style="font-size:0.72rem; font-weight:700; color:var(--primary); cursor:pointer;" onclick="openCategory('${k}', '${safeName}')">VIEW ALL</span>
-                    </div>
-                    <div class="grid">`;
-                    shown.forEach((app) => {
-                        const tagsHtml = getTagsHtml(app);
-                        html += `<div class="card" id="home-card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap"><div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"> ${tagsHtml}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
-                    });
-                    html += `</div>`;
-                });
-                container.innerHTML = html;
-            }
             db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));            
             function renderCategories() {
                 const grid = document.getElementById("cat-grid");
@@ -2207,7 +2193,7 @@
                     const sorted = Object.entries(globalCats).sort((a, b) => (a[1].position || 999) - (b[1].position || 999));
                     sorted.forEach(([k, c]) => {
                         if (c.active !== false) {
-                            grid.innerHTML += ` <div class="cat-card" onclick="openCategory('${k}', '${c.name}')"><div class="cat-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" alt="${c.name}" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div></div>`;
+                            grid.innerHTML += ` <div class="cat-card" onclick="openCategory('${k}', '${c.name}')"><div class="cat-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" alt="${c.name}" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="cat-info"><div class="cat-name">${c.name}</div><i class="fas fa-chevron-right cat-arrow"></i></div></div>`;
                         }
                     });
                 }
