@@ -431,24 +431,25 @@
                 contain: layout style;
             }
             .card {
-                background: transparent;
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                box-shadow: none;
+                background: var(--card-bg);
+                border: 1px solid rgba(59, 130, 246, 0.16);
+                border-radius: 18px;
+                padding: 0 0 12px;
+                box-shadow: var(--shadow-card);
                 cursor: pointer;
                 position: relative;
                 display: flex;
                 flex-direction: column;
                 align-items: flex-start;
                 text-align: left;
-                transition: opacity 0.15s ease;
+                overflow: hidden;
+                transition: opacity 0.15s ease, transform 0.15s ease;
                 /* Skip layout/paint work for cards currently scrolled off-screen —
                    the browser reserves the space via contain-intrinsic-size and
                    only does real work once a card nears the viewport. Meaningful
                    speed-up on long product grids with zero visual change. */
                 content-visibility: auto;
-                contain-intrinsic-size: 0 260px;
+                contain-intrinsic-size: 0 300px;
             }
             .skeleton-layer {
                 position: absolute;
@@ -471,32 +472,32 @@
                 position: relative;
                 z-index: 2;
             }
-            .card:active { opacity: 0.8; }
+            .card:active { transform: scale(0.98); opacity: 0.92; }
             /* Fine (hover-capable) pointers get a subtle whole-card lift; touch
                devices get none (there's no hover state to lift on). transform-only
                so it's compositor/GPU work, not layout — cheap even on low-end
                Android, and the whole thing finishes in 200ms. */
             @media (hover: hover) {
-                .card { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.3, 1); will-change: transform; }
-                .card:hover { transform: translateY(-4px); }
-                .card:hover .prod-img-wrap { box-shadow: var(--shadow-raised); }
+                .card { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease; will-change: transform; }
+                .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-raised); border-color: var(--primary); }
             }
-            .card.last-clicked .prod-img-wrap { outline: 2px solid var(--success); outline-offset: 2px; }
-            /* Big rounded cover-art wrapper, edge-to-edge like a book/app cover */
+            .card.last-clicked { outline: 2px solid var(--success); outline-offset: 2px; }
+            /* Banner sits flush at the very top of the card — no border/radius/shadow
+               of its own anymore, since the card itself is now the one shape that owns
+               all of that. This is what makes it read as one attractive container
+               (banner → title → price) instead of a floating image with bare text
+               underneath. */
             .prod-img-wrap {
                 width: 100%;
                 aspect-ratio: 3 / 4;
-                border-radius: 16px;
                 overflow: hidden;
                 background: var(--surface-variant);
-                border: 1px solid rgba(59, 130, 246, 0.18);
                 position: relative;
-                margin-bottom: 8px;
-                box-shadow: var(--shadow-card);
-                transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+                margin-bottom: 10px;
             }
-            .card:active .prod-img-wrap { transform: scale(0.97); }
-            .card:hover .prod-img-wrap { border-color: var(--primary); }
+            .card h3 { padding: 0 12px; }
+            .price-row { padding: 0 12px; }
+            .card p { padding: 0 12px; }
             /* Quick "Buy Now" pill, Steam-card style — the discount badge now lives
                in the unified .badge-stack above, one corner, no overlap. */
             .quick-buy-btn {
