@@ -681,11 +681,11 @@
                 border-radius: 24px 24px 0 0;
             }
             .modal.modal-popup.active .modal-content {
-                animation: popupCardIn 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+                animation: popupCardIn 0.18s ease-out;
             }
             @keyframes popupCardIn {
-                from { opacity: 0; transform: translateY(16px) scale(0.97); }
-                to { opacity: 1; transform: translateY(0) scale(1); }
+                from { opacity: 0; }
+                to { opacity: 1; }
             }
             .modal-header {
                 display: flex;
@@ -1536,6 +1536,16 @@
                     .replace(/>/g, "&gt;")
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&#039;");
+            }
+            // Backward-compat for messages sent before this session's fix, which
+            // stored a raw '<img src="data:..." onclick="...">' HTML STRING as the
+            // message body instead of a dedicated field. Pulls out ONLY the base64
+            // data URI via regex — never re-inserts any of the old surrounding
+            // markup/attributes (that's exactly the part that made it unsafe).
+            function extractLegacyImageSrc(text) {
+                if (!text || typeof text !== "string") return null;
+                const match = text.match(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/);
+                return match ? match[0] : null;
             }
 
             function showToast(msg, type = "info") {
@@ -2662,7 +2672,13 @@
                         const msgs = [];
                         if (s.val()) {
                             Object.values(s.val()).forEach((m) => {
-                                msgs.push({ text: m.body, image: m.imageData, type: "user", time: m.timestamp });
+                                const legacyImg = m.imageData ? null : extractLegacyImageSrc(m.body);
+                                msgs.push({
+                                    text: legacyImg ? "📷 Photo attached" : m.body,
+                                    image: m.imageData || legacyImg,
+                                    type: "user",
+                                    time: m.timestamp,
+                                });
                                 if (m.reply) msgs.push({ text: m.reply, type: "admin", time: m.replyTime });
                             });
                             msgs.sort((a, b) => a.time - b.time);
