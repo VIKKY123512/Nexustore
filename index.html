@@ -253,8 +253,8 @@
             }
             header.scrolled {
                 background: rgba(17, 24, 39, 0.72);
-                -webkit-backdrop-filter: blur(18px) saturate(160%);
-                backdrop-filter: blur(18px) saturate(160%);
+                -webkit-backdrop-filter: blur(12px) saturate(140%);
+                backdrop-filter: blur(12px) saturate(140%);
                 border-bottom: 1px solid var(--glass-border);
                 box-shadow: var(--shadow-card);
             }
@@ -569,7 +569,6 @@
             .mini-badge {
                 font-size: 0.56rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;
                 letter-spacing: 0.2px; line-height: 1.4; white-space: nowrap; color: #fff;
-                -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
             }
             .mini-badge.owned { background: rgba(34, 197, 94, 0.85); }
             .mini-badge.discount { background: rgba(239, 68, 68, 0.9); }
@@ -594,8 +593,8 @@
                 width: 92%;
                 max-width: 400px;
                 background: rgba(17, 24, 39, 0.6);
-                -webkit-backdrop-filter: blur(22px) saturate(160%);
-                backdrop-filter: blur(22px) saturate(160%);
+                -webkit-backdrop-filter: blur(12px) saturate(140%);
+                backdrop-filter: blur(12px) saturate(140%);
                 border: 1px solid rgba(148, 163, 184, 0.14);
                 border-radius: 40px;
                 padding: 10px 26px;
@@ -2663,7 +2662,7 @@
                         const msgs = [];
                         if (s.val()) {
                             Object.values(s.val()).forEach((m) => {
-                                msgs.push({ text: m.body, type: "user", time: m.timestamp });
+                                msgs.push({ text: m.body, image: m.imageData, type: "user", time: m.timestamp });
                                 if (m.reply) msgs.push({ text: m.reply, type: "admin", time: m.replyTime });
                             });
                             msgs.sort((a, b) => a.time - b.time);
@@ -2672,7 +2671,15 @@
                                     msg.type === "admin"
                                         ? '<img src="bluetick.png" style="width:14px; height:14px; vertical-align:middle; margin-right:4px;" alt="Verified Admin">'
                                         : "";
-                                div.innerHTML += `<div class="chat-bubble chat-${msg.type}">${adminBadge}${msg.text}</div>`;
+                                // Text is always escaped — this used to insert msg.text
+                                // straight into innerHTML with zero sanitization, a real
+                                // stored-XSS hole via the free-text support message box.
+                                // Images render from a dedicated, known-safe base64 field
+                                // (never user-typed HTML) rather than being embedded in text.
+                                const imgHtml = (msg.image && msg.image.startsWith("data:image/"))
+                                    ? `<img src="${msg.image}" style="width:100%; border-radius:12px; margin-top:5px; box-shadow:0 5px 15px rgba(0,0,0,0.3); border:2px solid var(--primary); cursor:pointer;" onclick="window.open(this.src)">`
+                                    : "";
+                                div.innerHTML += `<div class="chat-bubble chat-${msg.type}">${adminBadge}${escapeHtml(msg.text)}${imgHtml}</div>`;
                             });
                             div.scrollTop = div.scrollHeight;
                         }
@@ -2844,13 +2851,20 @@
                         // Compress to Base64 JPEG
                         const base64 = canvas.toDataURL('image/jpeg', 0.6);
                         
-                        // Inject directly into Firebase as HTML payload
+                        // Store the image in its own field as plain base64 (no HTML at
+                        // all) and keep body as safe plain text. Previously this pushed
+                        // a raw '<img ... onclick="...">' HTML STRING into body — that's
+                        // exactly the shape of a stored-XSS payload, and it only ever
+                        // "worked" by accident because the sender's own chat view
+                        // renders via innerHTML with no escaping. It correctly failed to
+                        // render in admin.html, which safely escapes message bodies.
                         db.ref("messages").push({
                             user: currentUser.id,
                             userName: currentUser.name,
                             email: currentUser.email,
                             title: "Image Upload",
-                            body: `<img src="${base64}" style="width: 100%; border-radius: 12px; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 2px solid #00f2fe; cursor: pointer;" onclick="window.open('${base64}')" />`,
+                            body: "📷 Photo attached",
+                            imageData: base64,
                             timestamp: Date.now(),
                         });
                         
@@ -2951,10 +2965,19 @@
                     }
                     return { shadow: shadows.join(","), size: sizePx };
                 }
+                // Budget Android phones (the majority of this site's traffic) report
+                // deviceMemory <= 4 fairly often. Halve the star count there instead
+                // of paying full rasterization/memory cost for a background flourish.
+                // Below 2GB, skip the starfield's dot-fields entirely — the gradient
+                // backdrop alone still looks fine, and the stars aren't worth the cost
+                // on a device that's already tight on resources.
+                const mem = navigator.deviceMemory || 8; // unsupported browsers (iOS Safari etc.) assume desktop-class
+                if (mem <= 2) return;
+                const scale = mem <= 4 ? 0.5 : 1;
                 const layers = [
-                    { id: "star-layer-small", count: 140, size: "1px", alpha: 0.55 },
-                    { id: "star-layer-medium", count: 70, size: "2px", alpha: 0.75 },
-                    { id: "star-layer-large", count: 35, size: "3px", alpha: 0.95 },
+                    { id: "star-layer-small", count: Math.round(90 * scale), size: "1px", alpha: 0.5 },
+                    { id: "star-layer-medium", count: Math.round(45 * scale), size: "2px", alpha: 0.7 },
+                    { id: "star-layer-large", count: Math.round(20 * scale), size: "3px", alpha: 0.9 },
                 ];
                 layers.forEach((cfg) => {
                     const el = document.getElementById(cfg.id);
