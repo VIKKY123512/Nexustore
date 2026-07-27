@@ -679,6 +679,11 @@
             .modal.modal-popup .modal-header {
                 margin: -20px -20px 16px;
                 border-radius: 24px 24px 0 0;
+                position: static; /* was inheriting position:sticky from the base rule below —
+                    sticky + border-radius on the same scroll container is a known Chrome/Android
+                    rendering trap where the sticky element can paint outside the parent's rounded
+                    clip mid-scroll. These popups max out at 85vh, so a pinned header was never
+                    actually necessary here; a normal in-flow header sidesteps the bug entirely. */
             }
             .modal.modal-popup.active .modal-content {
                 animation: popupCardIn 0.18s ease-out;
