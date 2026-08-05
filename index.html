@@ -1721,6 +1721,10 @@
                                     if (m.reply && Date.now() - (m.replyTime || 0) < 10000)
                                         showToast("New Support Reply", "success");
                                 });
+                        })
+                        .catch((err) => {
+                            console.error("Failed to load account:", err);
+                            showToast("Could not load your account — check your connection and try again", "error");
                         });
                 } else {
                     currentUser = null;
