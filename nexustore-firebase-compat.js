@@ -468,6 +468,12 @@
     };
   }
   auth.GoogleAuthProvider = function GoogleAuthProvider() {};
+  // admin.html reads firebase.auth.Auth.Persistence.LOCAL/.SESSION when you
+  // tap Login — without this object it throws immediately (before signing
+  // in at all), which is why login got stuck on "Authenticating...".
+  // Supabase persists sessions in localStorage by default either way, so
+  // these values are accepted but don't change behavior.
+  auth.Auth = { Persistence: { LOCAL: 'LOCAL', SESSION: 'SESSION', NONE: 'NONE' } };
 
   function database() {
     return { ref: (path) => new RefShim(path) };
