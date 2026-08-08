@@ -458,12 +458,44 @@
         return sessionToFirebaseUser(currentSession);
       },
       setPersistence: async () => {}, // Supabase persists sessions by default; no-op
-      signInWithEmailAndPassword: (email, password) => supabase.auth.signInWithPassword({ email, password }),
-      createUserWithEmailAndPassword: (email, password) => supabase.auth.signUp({ email, password }),
-      sendPasswordResetEmail: (email) => supabase.auth.resetPasswordForEmail(email),
       signOut: () => supabase.auth.signOut(),
-      signInWithPopup: () => supabase.auth.signInWithOAuth({ provider: 'google' }), // Supabase OAuth always redirects; no true popup
-      signInWithRedirect: () => supabase.auth.signInWithOAuth({ provider: 'google' }),
+      // Supabase auth calls resolve normally even on failure (wrong password,
+      // unconfirmed email, etc.) — the failure is just an `error` field on
+      // the result. Firebase instead REJECTS the promise on failure and
+      // resolves with a {user: {...}} shape on success. Without this
+      // translation, app code's .catch() never fires on real auth errors,
+      // and .then(cred => cred.user.uid) crashes on success because the
+      // shape doesn't match — which is what was actually breaking login/signup.
+      signInWithEmailAndPassword: async (email, password) => {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        return { user: sessionToFirebaseUser({ user: data.user }) };
+      },
+      createUserWithEmailAndPassword: async (email, password) => {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        if (!data.session) {
+          // Account was created, but Supabase's "Confirm email" setting is
+          // gating the session until the user clicks a link in their inbox —
+          // unlike Firebase, which logs a new user in immediately. To match
+          // the old app's instant-login-after-signup behavior, disable
+          // "Confirm email" in Supabase → Authentication → Providers → Email.
+          throw new Error('Account created — check your email to confirm it, then log in.');
+        }
+        return { user: sessionToFirebaseUser({ user: data.user }) };
+      },
+      sendPasswordResetEmail: async (email) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+      },
+      signInWithPopup: async () => {
+        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' }); // Supabase OAuth always redirects; no true popup
+        if (error) throw error;
+      },
+      signInWithRedirect: async () => {
+        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+        if (error) throw error;
+      },
       getRedirectResult: async () => ({ user: sessionToFirebaseUser(currentSession) }),
     };
   }
