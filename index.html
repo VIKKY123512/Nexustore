@@ -692,6 +692,94 @@
                 from { opacity: 0; }
                 to { opacity: 1; }
             }
+            /* --- Galaxy/universe theme, scoped to the login screen only.
+               Pure CSS (no images/libraries), respects prefers-reduced-motion.
+               Doesn't touch any other modal, input id, or button handler. --- */
+            #auth-modal {
+                background:
+                    radial-gradient(ellipse at 20% 15%, rgba(59, 130, 246, 0.28) 0%, transparent 50%),
+                    radial-gradient(ellipse at 85% 5%, rgba(6, 182, 212, 0.22) 0%, transparent 45%),
+                    radial-gradient(ellipse at 50% 105%, rgba(139, 92, 246, 0.28) 0%, transparent 55%),
+                    linear-gradient(180deg, #05060f 0%, #0b0f24 45%, #0a0620 100%);
+                overflow: hidden;
+            }
+            #auth-modal::before, #auth-modal::after {
+                content: "";
+                position: absolute;
+                inset: -20% -10%;
+                pointer-events: none;
+                background-repeat: repeat;
+                background-image:
+                    radial-gradient(1.6px 1.6px at 20px 30px, #fff, transparent),
+                    radial-gradient(1px 1px at 90px 120px, #fff, transparent),
+                    radial-gradient(1.6px 1.6px at 150px 60px, rgba(255, 255, 255, .85), transparent),
+                    radial-gradient(1px 1px at 210px 200px, #fff, transparent),
+                    radial-gradient(1.6px 1.6px at 260px 40px, rgba(255, 255, 255, .75), transparent),
+                    radial-gradient(1px 1px at 300px 150px, #fff, transparent);
+                background-size: 340px 340px;
+                opacity: 0.85;
+                animation: authStarDrift 100s linear infinite;
+            }
+            #auth-modal::after {
+                background-size: 480px 480px;
+                background-position: 120px 80px;
+                opacity: 0.45;
+                animation: authStarDrift 160s linear infinite reverse;
+            }
+            @keyframes authStarDrift {
+                from { transform: translateY(0); }
+                to { transform: translateY(-480px); }
+            }
+            #auth-modal .modal-content {
+                background: rgba(9, 13, 28, 0.55);
+                -webkit-backdrop-filter: blur(16px);
+                backdrop-filter: blur(16px);
+                position: relative;
+                z-index: 1;
+            }
+            #auth-modal .modal-header {
+                background: transparent;
+                position: relative;
+            }
+            #auth-modal .modal-header::before {
+                content: "";
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 150px;
+                height: 150px;
+                transform: translate(-50%, -50%);
+                background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.18) 45%, transparent 70%);
+                filter: blur(6px);
+                animation: authNebulaPulse 5s ease-in-out infinite;
+                z-index: -1;
+            }
+            @keyframes authNebulaPulse {
+                0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+                50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+            }
+            #auth-modal .modal-title {
+                background: linear-gradient(90deg, #fff 0%, #93c5fd 50%, #67e8f9 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+                letter-spacing: 0.5px;
+            }
+            #auth-modal .inp {
+                background: rgba(255, 255, 255, 0.06);
+                border-color: rgba(148, 163, 184, 0.25);
+            }
+            #auth-modal .btn-main {
+                background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%);
+                box-shadow: 0 0 24px rgba(99, 102, 241, 0.45);
+                border: none;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                #auth-modal::before, #auth-modal::after, #auth-modal .modal-header::before {
+                    animation: none;
+                }
+            }
             .modal-header {
                 display: flex;
                 align-items: center;
