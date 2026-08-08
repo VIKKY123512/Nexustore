@@ -95,6 +95,22 @@
     };
   }
 
+  // Firebase RTDB returns lists as {id1: {...}, id2: {...}} — the app code
+  // relies on that shape everywhere (Object.entries(snap.val()), snap.forEach
+  // giving the real id as .key, delete-by-key, etc.). The REST API returns
+  // plain arrays instead (normal for REST), so every list-returning handler
+  // below converts through this — without it, "keys" extracted from an array
+  // are just indices ("0","1","2") instead of real ids, silently breaking
+  // every delete/edit/lookup that depends on the key being real.
+  function keyedObject(arr) {
+    if (!Array.isArray(arr)) return arr;
+    const out = {};
+    for (const item of arr) {
+      if (item && item.id !== undefined) out[item.id] = item;
+    }
+    return out;
+  }
+
   // ---- Path -> API handler resolution -------------------------------
 
   function currentUid() {
@@ -162,7 +178,7 @@
     // categories
     if (path === 'categories') {
       return {
-        get: () => apiFetch(isAdminPage() ? '/admin/categories' : '/categories'),
+        get: async () => keyedObject(await apiFetch(isAdminPage() ? '/admin/categories' : '/categories')),
         push: (v) => apiFetch('/admin/categories', { method: 'POST', body: v }),
       };
     }
@@ -178,7 +194,7 @@
     // apps (products)
     if (path === 'apps') {
       return {
-        get: () => apiFetch(isAdminPage() ? '/admin/products' : '/products'),
+        get: async () => keyedObject(await apiFetch(isAdminPage() ? '/admin/products' : '/products')),
         pushKeyOnly: () => crypto.randomUUID(),
       };
     }
@@ -198,13 +214,13 @@
         const uid = query.equalValue;
         return {
           get: async () => {
-            if (uid === currentUid()) return apiFetch('/me/orders');
+            if (uid === currentUid()) return keyedObject(await apiFetch('/me/orders'));
             const all = await apiFetch('/admin/orders');
-            return all.filter((o) => o.userId === uid);
+            return keyedObject(all.filter((o) => o.userId === uid));
           },
         };
       }
-      return { get: () => apiFetch('/admin/orders') };
+      return { get: async () => keyedObject(await apiFetch('/admin/orders')) };
     }
     if ((m = path.match(/^orders\/(.+)$/))) {
       const id = m[1];
@@ -214,12 +230,15 @@
           v && v.status === 'cancelled'
             ? apiFetch(`/orders/${id}/cancel`, { method: 'PATCH' })
             : Promise.reject(new Error('Only status:"cancelled" updates are supported client-side for orders')),
+        // Stale-pending-order cleanup (attachOrdersListener) calls .remove()
+        // directly — same effect as cancelling, so route it there.
+        removeVal: () => apiFetch(`/orders/${id}/cancel`, { method: 'PATCH' }).catch(() => {}),
       };
     }
 
     // users
     if (path === 'users') {
-      return { get: () => apiFetch('/admin/users') };
+      return { get: async () => keyedObject(await apiFetch('/admin/users')) };
     }
     // users/{uid}/wishlist — a plain array of product ids, written as a
     // whole (currentUser.wishlist is mutated locally then .set() back),
@@ -262,10 +281,10 @@
     // messages (support ticket thread)
     if (path === 'messages') {
       if (query.orderField === 'user' && query.equalValue) {
-        return { get: () => apiFetch('/me/messages') };
+        return { get: async () => keyedObject(await apiFetch('/me/messages')) };
       }
       return {
-        get: () => apiFetch('/admin/messages'),
+        get: async () => keyedObject(await apiFetch('/admin/messages')),
         push: (v) => apiFetch('/messages', { method: 'POST', body: { title: v.title, msg: v.msg } }),
       };
     }
@@ -280,7 +299,7 @@
     // notifications
     if (path === 'notifications') {
       return {
-        get: () => apiFetch('/notifications'),
+        get: async () => keyedObject(await apiFetch('/notifications')),
         push: (v) => apiFetch('/admin/notifications', { method: 'POST', body: { title: v.title, body: v.msg } }),
       };
     }
@@ -291,12 +310,12 @@
 
     // downloads_log (read-only from the client — entries are written server-side)
     if (path === 'downloads_log') {
-      return { get: () => apiFetch('/admin/downloads-log') };
+      return { get: async () => keyedObject(await apiFetch('/admin/downloads-log')) };
     }
 
     // trash
     if (path === 'trash') {
-      return { get: () => apiFetch('/admin/trash') };
+      return { get: async () => keyedObject(await apiFetch('/admin/trash')) };
     }
     if ((m = path.match(/^trash\/(.+)$/))) {
       const id = m[1];
@@ -512,26 +531,51 @@
     return { ref: (path) => new RefShim(path) };
   }
 
+  function showFatalBanner(message) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#dc2626;color:#fff;padding:12px;text-align:center;font-family:sans-serif;font-size:14px;word-break:break-all;';
+    banner.textContent = message;
+    const attach = () => document.body.prepend(banner);
+    document.body ? attach() : window.addEventListener('DOMContentLoaded', attach);
+    console.error('[nexustore-compat] ' + message);
+  }
+
+  function validateConfig(config) {
+    const problems = [];
+    if (!config.supabaseUrl || !/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.supabaseUrl.trim())) {
+      problems.push(`supabaseUrl looks wrong: "${config.supabaseUrl}" — should look like https://xxxxxxxx.supabase.co with no trailing slash, no spaces, no /rest or /auth suffix.`);
+    }
+    if (!config.supabaseAnonKey || config.supabaseAnonKey.trim().length < 20 || /your-anon|placeholder|xxxx/i.test(config.supabaseAnonKey)) {
+      problems.push(`supabaseAnonKey looks wrong or still a placeholder: "${config.supabaseAnonKey}".`);
+    }
+    if (!config.apiBase || !/^https?:\/\/.+\/api\/?$/i.test(config.apiBase.trim())) {
+      problems.push(`apiBase looks wrong: "${config.apiBase}" — should end in /api, e.g. https://your-backend.onrender.com/api.`);
+    }
+    return problems;
+  }
+
   global.firebase = {
     initializeApp(config) {
-      API_BASE = config.apiBase || API_BASE;
-      if (!global.supabase || typeof global.supabase.createClient !== 'function') {
-        // If the Supabase library script failed to load or load in time, every
-        // feature on the page would otherwise fail silently with no
-        // explanation (and often confusing "Failed to fetch" symptoms from
-        // whatever runs next). Show it plainly instead.
-        const banner = document.createElement('div');
-        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#dc2626;color:#fff;padding:12px;text-align:center;font-family:sans-serif;font-size:14px;';
-        banner.textContent = 'Could not load required libraries (Supabase). Check your internet connection and reload the page.';
-        document.body ? document.body.prepend(banner) : window.addEventListener('DOMContentLoaded', () => document.body.prepend(banner));
-        console.error('[nexustore-compat] window.supabase.createClient is unavailable — the Supabase JS library did not load correctly.');
+      const problems = validateConfig(config);
+      if (problems.length) {
+        showFatalBanner('Config problem — ' + problems.join(' | '));
         return;
       }
-      supabase = global.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+      API_BASE = config.apiBase || API_BASE;
+      if (!global.supabase || typeof global.supabase.createClient !== 'function') {
+        showFatalBanner('Could not load required libraries (Supabase). Check your internet connection and reload the page.');
+        return;
+      }
+      try {
+        supabase = global.supabase.createClient(config.supabaseUrl.trim(), config.supabaseAnonKey.trim());
+      } catch (e) {
+        showFatalBanner('Supabase client failed to start: ' + e.message);
+        return;
+      }
       supabase.auth.getSession().then(({ data }) => {
         currentSession = data.session;
         notifyAuthListeners();
-      });
+      }).catch((e) => showFatalBanner('Could not reach Supabase: ' + e.message));
       supabase.auth.onAuthStateChange((_event, session) => {
         currentSession = session;
         notifyAuthListeners();
