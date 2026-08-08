@@ -468,7 +468,14 @@
     return {
       onAuthStateChanged(cb) {
         authStateListeners.push(cb);
-        cb(sessionToFirebaseUser(currentSession)); // fire immediately with current state, like Firebase does
+        // Real Firebase NEVER calls this synchronously, even for cached
+        // state — it always fires on a later tick. Calling it synchronously
+        // here was a bug: it ran this callback before the rest of the
+        // page's own <script> had finished executing top-to-bottom, which
+        // could hit "Cannot access 'X' before initialization" for any
+        // variable the callback references that's declared further down
+        // the same file (exactly what happened with ordersQueryRef).
+        Promise.resolve().then(() => cb(sessionToFirebaseUser(currentSession)));
         return () => {
           const i = authStateListeners.indexOf(cb);
           if (i >= 0) authStateListeners.splice(i, 1);
