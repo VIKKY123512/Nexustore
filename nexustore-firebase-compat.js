@@ -65,6 +65,7 @@
   }
 
   async function apiFetch(path, { method = 'GET', body } = {}) {
+    if (!supabase) throw new Error('App failed to start — reload the page.');
     const session = (await supabase.auth.getSession()).data.session;
     const headers = { 'Content-Type': 'application/json' };
     if (session) headers.Authorization = 'Bearer ' + session.access_token;
@@ -514,6 +515,18 @@
   global.firebase = {
     initializeApp(config) {
       API_BASE = config.apiBase || API_BASE;
+      if (!global.supabase || typeof global.supabase.createClient !== 'function') {
+        // If the Supabase library script failed to load or load in time, every
+        // feature on the page would otherwise fail silently with no
+        // explanation (and often confusing "Failed to fetch" symptoms from
+        // whatever runs next). Show it plainly instead.
+        const banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#dc2626;color:#fff;padding:12px;text-align:center;font-family:sans-serif;font-size:14px;';
+        banner.textContent = 'Could not load required libraries (Supabase). Check your internet connection and reload the page.';
+        document.body ? document.body.prepend(banner) : window.addEventListener('DOMContentLoaded', () => document.body.prepend(banner));
+        console.error('[nexustore-compat] window.supabase.createClient is unavailable — the Supabase JS library did not load correctly.');
+        return;
+      }
       supabase = global.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
       supabase.auth.getSession().then(({ data }) => {
         currentSession = data.session;
