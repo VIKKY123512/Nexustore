@@ -92,6 +92,13 @@
           Object.entries(val).forEach(([k, v]) => cb(makeSnapshot(k, v)));
         }
       },
+      // Firebase snapshots support these too — several places in the app
+      // call them, and a missing method throws inside a poll/once callback,
+      // which was failing SILENTLY (caught by the shim's own try/catch) and
+      // looked like "nothing happens" with no visible error.
+      numChildren: () => (val && typeof val === 'object' ? Object.keys(val).length : 0),
+      hasChild: (childKey) => !!(val && typeof val === 'object' && Object.prototype.hasOwnProperty.call(val, childKey)),
+      child: (childKey) => makeSnapshot(childKey, val && typeof val === 'object' ? val[childKey] : undefined),
     };
   }
 
@@ -375,10 +382,18 @@
       return new RefShim(this.path, { ...this.query, limit: n });
     }
 
-    async once(event) {
+    once(event, successCallback, failureCallback) {
       const handler = buildHandler(this.path, this.query);
-      const val = await handler.get();
-      return makeSnapshot(this.key, val);
+      const promise = handler.get().then(
+        (val) => makeSnapshot(this.key, val),
+        (err) => { throw err; }
+      );
+      if (typeof successCallback === 'function') {
+        // Firebase supports once(event, cb) as well as once(event) returning
+        // a promise — the app uses both forms throughout. Support both.
+        promise.then(successCallback, failureCallback || ((e) => console.error('[nexustore-compat] once() error for', this.path, e)));
+      }
+      return promise;
     }
 
     on(event, cb) {
