@@ -292,7 +292,7 @@
       }
       return {
         get: async () => keyedObject(await apiFetch('/admin/messages')),
-        push: (v) => apiFetch('/messages', { method: 'POST', body: { title: v.title, msg: v.msg } }),
+        push: (v) => apiFetch('/messages', { method: 'POST', body: { title: v.title, body: v.body, imageData: v.imageData } }),
       };
     }
     if ((m = path.match(/^messages\/(.+)$/))) {
@@ -409,12 +409,16 @@
               cb(makeSnapshot(this.key, val));
             }
           } else if (event === 'child_changed') {
-            // Special-cased for the one real usage (support-reply notification):
-            // val is expected to be an array; fire once per item whose reply changed.
-            if (Array.isArray(val) && prevJson !== null) {
-              const prevArr = JSON.parse(prevJson);
-              val.forEach((item) => {
-                const prevItem = prevArr.find((p) => p.id === item.id);
+            // Special-cased for the one real usage (support-reply notification).
+            // Handlers now return a keyed object ({id: item, ...}), matching
+            // Firebase's real shape — normalize both that and a bare array so
+            // this keeps working regardless of which a given handler returns.
+            const items = Array.isArray(val) ? val : (val && typeof val === 'object' ? Object.values(val) : []);
+            if (items.length && prevJson !== null) {
+              const prevRaw = JSON.parse(prevJson);
+              const prevItems = Array.isArray(prevRaw) ? prevRaw : (prevRaw && typeof prevRaw === 'object' ? Object.values(prevRaw) : []);
+              items.forEach((item) => {
+                const prevItem = prevItems.find((p) => p.id === item.id);
                 if (prevItem && JSON.stringify(prevItem) !== JSON.stringify(item)) {
                   cb(makeSnapshot(item.id, item));
                 }
