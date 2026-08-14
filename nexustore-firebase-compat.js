@@ -1,45 +1,52 @@
 /**
- * NexusStore Firebase-compat shim
- * ================================
+ * NexusStore Firebase-compat shim — v2, direct-to-Supabase
+ * ==========================================================
  * Drop-in replacement for the firebase-app/auth/database *compat* SDK
  * scripts. Implements only the subset of the Firebase JS API this app
- * actually calls (verified against both index.html files), backed by:
+ * actually calls, backed by:
  *   - Supabase Auth for everything under firebase.auth()
- *   - The NexusStore REST API (nexustore-backend) for everything under
- *     firebase.database()
+ *   - Supabase Postgres DIRECTLY (via supabase-js, protected by Row Level
+ *     Security policies — see prisma/enable-rls.sql) for everything under
+ *     firebase.database(), EXCEPT orders/payments/secure-downloads/trash,
+ *     which still go through nexustore-backend (they need real server-side
+ *     logic — price re-validation, gateway calls, rate limiting — that
+ *     can't safely live in a client-writable table even with RLS).
+ *
+ * This removes the backend entirely from the critical path for browsing,
+ * login, profile, wishlist, messages, and (for admins) product/category/
+ * settings management — the things that broke whenever Render was slow to
+ * wake up or briefly unreachable. Only checkout and downloading a paid/free
+ * file still need the backend to be up.
  *
  * HOW TO USE
  * ----------
- * Replace these three lines in <head>/before your inline <script>:
- *   <script src=".../firebase-app-compat.js"></script>
- *   <script src=".../firebase-auth-compat.js"></script>
- *   <script src=".../firebase-database-compat.js"></script>
- * with:
- *   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+ *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  *   <script src="nexustore-firebase-compat.js"></script>
- *
- * And replace the firebaseConfig object + firebase.initializeApp(...) call
- * with:
- *   const firebaseConfig = {
- *     supabaseUrl: "https://xxxx.supabase.co",
- *     supabaseAnonKey: "eyJ...",   // Settings > API > anon/public key
- *     apiBase: "https://your-api-host/api",
- *   };
- *   firebase.initializeApp(firebaseConfig);
+ *   <script>
+ *     const firebaseConfig = {
+ *       supabaseUrl: "https://xxxx.supabase.co",
+ *       supabaseAnonKey: "eyJ...",   // Settings > API > anon/public key
+ *       apiBase: "https://your-api-host/api", // still needed for orders/downloads
+ *     };
+ *     firebase.initializeApp(firebaseConfig);
+ *   </script>
  * Everything else in both index.html files — every db.ref(...), auth.*
  * call, function name, DOM id — stays exactly as-is.
  *
+ * REQUIRES prisma/enable-rls.sql to have been run in Supabase's SQL Editor
+ * — without RLS policies, every direct table access below is blocked by
+ * default (Postgres denies all access once RLS is enabled with no matching
+ * policy), which is the safe failure direction but means nothing will load.
+ *
  * KNOWN LIMITATIONS (read before deploying)
  * ------------------------------------------
- * - "value" listeners poll every 3s instead of pushing instantly. For a
- *   store this size that's imperceptible for catalog/config data; for the
- *   support-reply notification it means up to ~3s delay instead of instant.
+ * - "value" listeners still poll every 3s rather than pushing instantly
+ *   (Supabase Realtime could remove this later, but polling is simpler and
+ *   was kept on purpose to minimize new risk in this rewrite).
  * - .orderByChild()/.equalTo()/.limitToLast() are special-cased for the
- *   exact queries this app uses (orders by userId, messages by user
- *   thread). A new query pattern added later won't be understood by this
- *   shim without extending PATH_HANDLERS below.
+ *   exact queries this app uses. A new query pattern added later won't be
+ *   understood without extending buildHandler() below.
  * - site_settings/pages/* page types are assumed to be about/privacy/terms/refund.
- *   If you add a new footer page type in admin.html, add it to PAGE_TYPES below.
  */
 (function (global) {
   const PAGE_TYPES = ['about', 'privacy', 'terms', 'refund'];
@@ -80,6 +87,57 @@
     }
     if (res.status === 204) return null;
     return res.json();
+  }
+
+  // ---- Direct-Supabase table helpers ------------------------------------
+  // Used for everything except orders/payments/secure-downloads/trash (see
+  // file header). Every RLS denial surfaces here as a normal thrown Error
+  // with Postgres's real message, same as apiFetch does for the backend.
+
+  function sb() {
+    if (!supabase) throw new Error('App failed to start — reload the page.');
+    return supabase;
+  }
+
+  function toEpoch(dateStr) {
+    return dateStr ? new Date(dateStr).getTime() : null;
+  }
+
+  async function sbSelect(table, build, columns) {
+    let q = sb().from(table).select(columns || '*');
+    if (build) q = build(q);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function sbSelectOne(table, build) {
+    let q = sb().from(table).select('*');
+    if (build) q = build(q);
+    const { data, error } = await q.maybeSingle();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function sbInsert(table, row) {
+    const { data, error } = await sb().from(table).insert(row).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function sbUpdate(table, matchCol, matchVal, patch) {
+    const { error } = await sb().from(table).update(patch).eq(matchCol, matchVal);
+    if (error) throw new Error(error.message);
+  }
+
+  async function sbDelete(table, matchCol, matchVal) {
+    const { error } = await sb().from(table).delete().eq(matchCol, matchVal);
+    if (error) throw new Error(error.message);
+  }
+
+  async function sbUpsert(table, row, conflictCol) {
+    const { error } = await sb().from(table).upsert(row, { onConflict: conflictCol });
+    if (error) throw new Error(error.message);
   }
 
   function makeSnapshot(key, val) {
@@ -124,49 +182,40 @@
     return currentSession?.user?.id || null;
   }
 
-  // Only admin.html defines window.ADMIN_WHITELIST — used purely to avoid
-  // firing a doomed /admin/* request (and a console 403) for every regular
-  // logged-in storefront user on every 3s poll. The real authorization
-  // check always happens server-side (requireAdmin), this is just routing.
-  function isAdminPage() {
-    const email = currentSession?.user?.email?.toLowerCase();
-    return typeof global.ADMIN_WHITELIST !== 'undefined' && email && global.ADMIN_WHITELIST.map((e) => e.toLowerCase()).includes(email);
-  }
-
   function buildHandler(path, query) {
     let m;
 
-    // config/{key}
+    // config/{key} -> AppConfig table
     if ((m = path.match(/^config\/(.+)$/))) {
       const key = m[1];
       return {
-        get: () => apiFetch(`/config/${key}`),
-        setVal: (v) => apiFetch(`/admin/config/${key}`, { method: 'PUT', body: v }),
+        get: () => sbSelectOne('AppConfig', (q) => q.eq('key', key)).then((r) => r?.value ?? null),
+        setVal: (v) => sbUpsert('AppConfig', { key, value: v }, 'key'),
         updateVal: async (v) => {
-          const cur = (await apiFetch(`/config/${key}`)) || {};
-          return apiFetch(`/admin/config/${key}`, { method: 'PUT', body: { ...cur, ...v } });
+          const cur = (await sbSelectOne('AppConfig', (q) => q.eq('key', key)).then((r) => r?.value)) || {};
+          return sbUpsert('AppConfig', { key, value: { ...cur, ...v } }, 'key');
         },
-        removeVal: () => apiFetch(`/admin/config/${key}`, { method: 'DELETE' }),
+        removeVal: () => sbDelete('AppConfig', 'key', key),
       };
     }
 
-    // site_settings/pages/{type}
+    // site_settings/pages/{type}, socials, popup -> SiteSetting table
     if ((m = path.match(/^site_settings\/pages\/(.+)$/))) {
       const key = `pages.${m[1]}`;
       return {
-        get: () => apiFetch(`/settings/${key}`),
-        setVal: (v) => apiFetch(`/admin/settings/${key}`, { method: 'PUT', body: v }),
-        updateVal: (v) => apiFetch(`/admin/settings/${key}`, { method: 'PUT', body: v }),
+        get: () => sbSelectOne('SiteSetting', (q) => q.eq('key', key)).then((r) => r?.value ?? null),
+        setVal: (v) => sbUpsert('SiteSetting', { key, value: v }, 'key'),
+        updateVal: (v) => sbUpsert('SiteSetting', { key, value: v }, 'key'),
       };
     }
     if (path === 'site_settings/socials' || path === 'site_settings/popup') {
       const key = path.split('/')[1];
       return {
-        get: () => apiFetch(`/settings/${key}`),
-        setVal: (v) => apiFetch(`/admin/settings/${key}`, { method: 'PUT', body: v }),
+        get: () => sbSelectOne('SiteSetting', (q) => q.eq('key', key)).then((r) => r?.value ?? null),
+        setVal: (v) => sbUpsert('SiteSetting', { key, value: v }, 'key'),
         updateVal: async (v) => {
-          const cur = (await apiFetch(`/settings/${key}`)) || {};
-          return apiFetch(`/admin/settings/${key}`, { method: 'PUT', body: { ...cur, ...v } });
+          const cur = (await sbSelectOne('SiteSetting', (q) => q.eq('key', key)).then((r) => r?.value)) || {};
+          return sbUpsert('SiteSetting', { key, value: { ...cur, ...v } }, 'key');
         },
       };
     }
@@ -174,48 +223,65 @@
       return {
         get: async () => {
           const pages = {};
-          for (const t of PAGE_TYPES) pages[t] = await apiFetch(`/settings/pages.${t}`);
-          const socials = await apiFetch('/settings/socials');
-          const popup = await apiFetch('/settings/popup');
+          for (const t of PAGE_TYPES) {
+            pages[t] = await sbSelectOne('SiteSetting', (q) => q.eq('key', `pages.${t}`)).then((r) => r?.value ?? null);
+          }
+          const socials = await sbSelectOne('SiteSetting', (q) => q.eq('key', 'socials')).then((r) => r?.value ?? null);
+          const popup = await sbSelectOne('SiteSetting', (q) => q.eq('key', 'popup')).then((r) => r?.value ?? null);
           return { pages, socials, popup };
         },
       };
     }
 
-    // categories
+    // categories -> Category table. RLS handles the public-vs-admin
+    // visibility split automatically (active=true OR is_admin()) — no more
+    // guessing which endpoint to call based on which page you're on.
     if (path === 'categories') {
       return {
-        get: async () => keyedObject(await apiFetch(isAdminPage() ? '/admin/categories' : '/categories')),
-        push: (v) => apiFetch('/admin/categories', { method: 'POST', body: v }),
+        get: async () => keyedObject(await sbSelect('Category', (q) => q.order('position'))),
+        push: (v) => sbInsert('Category', v),
       };
     }
     if ((m = path.match(/^categories\/(.+)$/))) {
       const id = m[1];
       return {
-        setVal: (v) => apiFetch(`/admin/categories/${id}`, { method: 'PUT', body: v }),
-        updateVal: (v) => apiFetch(`/admin/categories/${id}`, { method: 'PUT', body: v }), // admin always sends full object
-        removeVal: () => apiFetch(`/admin/categories/${id}`, { method: 'DELETE' }),
+        setVal: (v) => sbUpdate('Category', 'id', id, v),
+        updateVal: (v) => sbUpdate('Category', 'id', id, v),
+        removeVal: async () => {
+          // Soft-delete + trash record, done as two direct calls instead of
+          // one backend transaction — acceptable here (low-stakes admin
+          // action, not financial data); RLS still fully protects both.
+          const row = await sbSelectOne('Category', (q) => q.eq('id', id));
+          if (row) await sbInsert('Trash', { id: row.id, entityType: 'category', entityId: row.id, payload: row });
+          await sbUpdate('Category', 'id', id, { active: false, deletedAt: new Date().toISOString() });
+        },
       };
     }
 
-    // apps (products)
+    // apps (products) -> Product table
     if (path === 'apps') {
       return {
-        get: async () => keyedObject(await apiFetch(isAdminPage() ? '/admin/products' : '/products')),
+        get: async () => keyedObject(await sbSelect('Product', (q) => q.order('position'))),
         pushKeyOnly: () => crypto.randomUUID(),
       };
     }
     if ((m = path.match(/^apps\/(.+)$/))) {
       const id = m[1];
       return {
-        get: () => apiFetch(`/products/${id}`).catch(() => null),
-        setVal: (v) => apiFetch('/admin/products', { method: 'POST', body: { id, ...v } }),
-        updateVal: (v) => apiFetch(`/admin/products/${id}`, { method: 'PUT', body: v }),
-        removeVal: () => apiFetch(`/admin/products/${id}`, { method: 'DELETE' }),
+        get: () => sbSelectOne('Product', (q) => q.eq('id', id)),
+        setVal: (v) => sbInsert('Product', { id, ...v }),
+        updateVal: (v) => sbUpdate('Product', 'id', id, v),
+        removeVal: async () => {
+          const row = await sbSelectOne('Product', (q) => q.eq('id', id));
+          if (row) await sbInsert('Trash', { id: row.id, entityType: 'product', entityId: row.id, payload: row });
+          await sbUpdate('Product', 'id', id, { active: false, deletedAt: new Date().toISOString() });
+        },
       };
     }
 
-    // orders
+    // orders — deliberately still via the backend: order creation and
+    // payment need server-side price re-validation and gateway calls, not
+    // something a client-writable table should do even behind RLS.
     if (path === 'orders') {
       if (query.orderField === 'userId' && query.equalValue) {
         const uid = query.equalValue;
@@ -237,90 +303,127 @@
           v && v.status === 'cancelled'
             ? apiFetch(`/orders/${id}/cancel`, { method: 'PATCH' })
             : Promise.reject(new Error('Only status:"cancelled" updates are supported client-side for orders')),
-        // Stale-pending-order cleanup (attachOrdersListener) calls .remove()
-        // directly — same effect as cancelling, so route it there.
         removeVal: () => apiFetch(`/orders/${id}/cancel`, { method: 'PATCH' }).catch(() => {}),
       };
     }
 
-    // users
+    // users -> User table (+ Wishlist for the embedded array, matching the
+    // old app's currentUser.wishlist shape)
     if (path === 'users') {
-      return { get: async () => keyedObject(await apiFetch('/admin/users')) };
+      return { get: async () => keyedObject(await sbSelect('User')) };
     }
-    // users/{uid}/wishlist — a plain array of product ids, written as a
-    // whole (currentUser.wishlist is mutated locally then .set() back),
-    // not added/removed one product at a time.
     if ((m = path.match(/^users\/([^/]+)\/wishlist$/))) {
+      const uid = m[1];
       return {
-        setVal: (arr) => apiFetch('/me/wishlist', { method: 'PUT', body: arr }),
+        setVal: async (arr) => {
+          await sbDelete('Wishlist', 'userId', uid);
+          if (Array.isArray(arr) && arr.length) {
+            const { error } = await sb().from('Wishlist').insert(arr.map((productId) => ({ userId: uid, productId })));
+            if (error) throw new Error(error.message);
+          }
+        },
       };
     }
     if ((m = path.match(/^users\/([^/]+)\/status$/))) {
       const uid = m[1];
-      return {
-        get: async () => {
-          if (uid === currentUid()) return (await apiFetch('/me')).status;
-          const all = await apiFetch('/admin/users');
-          return all.find((u) => u.id === uid)?.status ?? null;
-        },
-      };
+      return { get: () => sbSelectOne('User', (q) => q.eq('id', uid)).then((u) => u?.status ?? null) };
     }
     if ((m = path.match(/^users\/([^/]+)$/))) {
       const uid = m[1];
       return {
         get: async () => {
-          if (uid === currentUid()) {
+          let user = await sbSelectOne('User', (q) => q.eq('id', uid));
+          if (!user && uid === currentUid()) {
+            // First login — create the row (replaces the old /me/ensure
+            // upsert). RLS's insert policy only allows creating your own row.
             const u = sessionToFirebaseUser(currentSession);
-            return apiFetch('/me/ensure', { method: 'POST', body: { name: u?.displayName || u?.email?.split('@')[0] || null } });
+            user = await sbInsert('User', {
+              id: uid,
+              email: u?.email || null,
+              name: u?.displayName || u?.email?.split('@')[0] || null,
+            });
           }
-          const all = await apiFetch('/admin/users');
-          return all.find((u) => u.id === uid) || null;
+          if (!user) return null;
+          const wishRows = await sbSelect('Wishlist', (q) => q.eq('userId', uid));
+          return {
+            ...user,
+            wishlist: (wishRows || []).map((r) => r.productId),
+            avatar: `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${encodeURIComponent(user.name || user.id)}`,
+          };
         },
-        setVal: (v) => (uid === currentUid() ? apiFetch('/me', { method: 'PATCH', body: v }) : null),
-        updateVal: (v) =>
-          uid === currentUid()
-            ? apiFetch('/me', { method: 'PATCH', body: v })
-            : apiFetch(`/admin/users/${uid}/status`, { method: 'PATCH', body: v }),
-        removeVal: () => apiFetch(`/admin/users/${uid}`, { method: 'DELETE' }),
+        setVal: (v) => sbUpdate('User', 'id', uid, { name: v.name }),
+        updateVal: (v) => sbUpdate('User', 'id', uid, uid === currentUid() ? { name: v.name } : v),
+        removeVal: () => sbDelete('User', 'id', uid),
       };
     }
 
-    // messages (support ticket thread)
-    if (path === 'messages') {
-      if (query.orderField === 'user' && query.equalValue) {
-        return { get: async () => keyedObject(await apiFetch('/me/messages')) };
-      }
+    // messages (support ticket thread) -> Message table. RLS restricts a
+    // regular user's SELECT to their own rows automatically, so the same
+    // query works for both "my thread" and "admin sees everyone" — no
+    // separate endpoint needed.
+    function serializeMessageRow(m) {
       return {
-        get: async () => keyedObject(await apiFetch('/admin/messages')),
-        push: (v) => apiFetch('/messages', { method: 'POST', body: { title: v.title, body: v.body, imageData: v.imageData } }),
+        id: m.id,
+        user: m.userId,
+        userName: m.User?.name ?? null,
+        userEmail: m.User?.email ?? null,
+        title: m.title,
+        body: m.body,
+        imageData: m.imageData,
+        reply: m.reply,
+        replyTime: toEpoch(m.replyTime),
+        timestamp: toEpoch(m.createdAt),
+      };
+    }
+    if (path === 'messages') {
+      const isOwnThread = query.orderField === 'user' && query.equalValue;
+      return {
+        get: async () => {
+          const rows = await sbSelect(
+            'Message',
+            (q) => {
+              q = q.order('createdAt', { ascending: false });
+              if (isOwnThread) q = q.eq('userId', query.equalValue);
+              return q;
+            },
+            '*, User(name, email)'
+          );
+          return keyedObject(rows.map(serializeMessageRow));
+        },
+        push: (v) => sbInsert('Message', { userId: currentUid(), title: v.title, body: v.body, imageData: v.imageData }),
       };
     }
     if ((m = path.match(/^messages\/(.+)$/))) {
       const id = m[1];
       return {
-        updateVal: (v) => apiFetch(`/admin/messages/${id}`, { method: 'PATCH', body: { reply: v.reply } }),
-        removeVal: () => apiFetch(`/admin/messages/${id}`, { method: 'DELETE' }),
+        updateVal: (v) => sbUpdate('Message', 'id', id, { reply: v.reply, replyTime: new Date().toISOString() }),
+        removeVal: () => sbDelete('Message', 'id', id),
       };
     }
 
-    // notifications
+    // notifications -> Notification table
     if (path === 'notifications') {
       return {
-        get: async () => keyedObject(await apiFetch('/notifications')),
-        push: (v) => apiFetch('/admin/notifications', { method: 'POST', body: { title: v.title, body: v.msg } }),
+        get: async () => {
+          const rows = await sbSelect('Notification', (q) => q.eq('active', true).order('createdAt', { ascending: false }));
+          return keyedObject(rows.map((n) => ({ id: n.id, title: n.title, msg: n.msg, timestamp: toEpoch(n.createdAt) })));
+        },
+        push: (v) => sbInsert('Notification', { title: v.title, msg: v.msg }),
       };
     }
     if ((m = path.match(/^notifications\/(.+)$/))) {
       const id = m[1];
-      return { removeVal: () => apiFetch(`/admin/notifications/${id}`, { method: 'DELETE' }) };
+      return { removeVal: () => sbUpdate('Notification', 'id', id, { active: false }) };
     }
 
-    // downloads_log (read-only from the client — entries are written server-side)
+    // downloads_log — stays backend-only: entries are written server-side
+    // as part of the secure download flow, admin just reads the log.
     if (path === 'downloads_log') {
       return { get: async () => keyedObject(await apiFetch('/admin/downloads-log')) };
     }
 
-    // trash
+    // trash — stays backend-only: restore/purge touches two tables and is
+    // simplest to keep atomic server-side.
     if (path === 'trash') {
       return { get: async () => keyedObject(await apiFetch('/admin/trash')) };
     }
@@ -329,7 +432,10 @@
       return { removeVal: () => apiFetch(`/admin/trash/${id}`, { method: 'DELETE' }) };
     }
 
-    // secureDownloads (admin download-link management)
+    // secureDownloads — stays backend-only on purpose: RLS has zero
+    // policies for this table (see enable-rls.sql), so it's genuinely
+    // unreachable from the browser no matter what. Only the backend's
+    // service-role key can read/write it.
     if ((m = path.match(/^secureDownloads\/(.+)$/))) {
       const id = m[1];
       return {
