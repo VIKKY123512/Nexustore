@@ -1498,12 +1498,10 @@
 
        
 
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
         <script src="nexustore-firebase-compat.js"></script>
         <script>
             const firebaseConfig = {
-                supabaseUrl: "https://gvfwyuqkamdenqkpzyfd.supabase.co", // Supabase Settings > API > Project URL
-                supabaseAnonKey: "sb_publishable_pbslj6PspgkMZNrp3XZytQ_xGw62Ffl", // Supabase Settings > API > anon public key
+                neonUrl: "https://ep-lingering-thunder-azb0aq5n.apirest.c-3.ap-southeast-1.aws.neon.tech/neondb/rest/v1", // Neon Console > Connect > HTTPS form (no credentials, no query params)
                 apiBase: "https://nexustore-api.onrender.com/api", // where nexustore-backend is deployed
             };
             firebase.initializeApp(firebaseConfig);
