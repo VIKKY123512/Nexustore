@@ -1,16 +1,19 @@
 /**
- * NexusStore Firebase-compat shim — v2, direct-to-Supabase
+ * NexusStore Firebase-compat shim — v3, direct-to-Neon
  * ==========================================================
  * Drop-in replacement for the firebase-app/auth/database *compat* SDK
  * scripts. Implements only the subset of the Firebase JS API this app
  * actually calls, backed by:
- *   - Supabase Auth for everything under firebase.auth()
- *   - Supabase Postgres DIRECTLY (via supabase-js, protected by Row Level
- *     Security policies — see prisma/enable-rls.sql) for everything under
- *     firebase.database(), EXCEPT orders/payments/secure-downloads/trash,
- *     which still go through nexustore-backend (they need real server-side
- *     logic — price re-validation, gateway calls, rate limiting — that
- *     can't safely live in a client-writable table even with RLS).
+ *   - Neon's Managed Better Auth (via @neondatabase/neon-js's
+ *     SupabaseAuthAdapter, which mirrors the supabase-js auth API) for
+ *     everything under firebase.auth()
+ *   - Neon's Data API (PostgREST-compatible) DIRECTLY, protected by Row
+ *     Level Security policies — see prisma/enable-rls.sql — for everything
+ *     under firebase.database(), EXCEPT orders/payments/secure-downloads/
+ *     trash, which still go through nexustore-backend (they need real
+ *     server-side logic — price re-validation, gateway calls, rate
+ *     limiting — that can't safely live in a client-writable table even
+ *     with RLS).
  *
  * This removes the backend entirely from the critical path for browsing,
  * login, profile, wishlist, messages, and (for admins) product/category/
@@ -20,40 +23,65 @@
  *
  * HOW TO USE
  * ----------
- *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  *   <script src="nexustore-firebase-compat.js"></script>
  *   <script>
  *     const firebaseConfig = {
- *       supabaseUrl: "https://xxxx.supabase.co",
- *       supabaseAnonKey: "eyJ...",   // Settings > API > anon/public key
+ *       neonUrl: "https://ep-xxxx.c-2.us-east-1.aws.neon.tech/neondb", // Neon Console > Connect (HTTPS form, no credentials)
  *       apiBase: "https://your-api-host/api", // still needed for orders/downloads
  *     };
  *     firebase.initializeApp(firebaseConfig);
  *   </script>
  * Everything else in both index.html files — every db.ref(...), auth.*
- * call, function name, DOM id — stays exactly as-is.
+ * call, function name, DOM id — stays exactly as-is. The old
+ * <script src=".../@supabase/supabase-js@2"></script> tag should be
+ * removed entirely; it's no longer needed (this file fetches
+ * @neondatabase/neon-js itself, from a CDN, via a dynamic import() — this
+ * file stays a plain classic script on purpose, NOT type="module", so the
+ * rest of index.html's inline <script> blocks keep running in the exact
+ * same order/timing they always have).
  *
- * REQUIRES prisma/enable-rls.sql to have been run in Supabase's SQL Editor
+ * REQUIRES prisma/enable-rls.sql (Neon edition) to have been run in the
+ * Neon SQL Editor, AND the Data API to be enabled with Managed Better Auth
  * — without RLS policies, every direct table access below is blocked by
  * default (Postgres denies all access once RLS is enabled with no matching
  * policy), which is the safe failure direction but means nothing will load.
  *
  * KNOWN LIMITATIONS (read before deploying)
  * ------------------------------------------
- * - "value" listeners still poll every 3s rather than pushing instantly
- *   (Supabase Realtime could remove this later, but polling is simpler and
- *   was kept on purpose to minimize new risk in this rewrite).
+ * - "value" listeners still poll every 3s rather than pushing instantly.
  * - .orderByChild()/.equalTo()/.limitToLast() are special-cased for the
  *   exact queries this app uses. A new query pattern added later won't be
  *   understood without extending buildHandler() below.
  * - site_settings/pages/* page types are assumed to be about/privacy/terms/refund.
+ * - The very first read after a page load can be up to ~1s slower than
+ *   before: the old supabase-js CDN script was a blocking <script src>, so
+ *   the client library was already loaded by the time firebase.initializeApp()
+ *   ran. @neondatabase/neon-js is ESM-only, so it's fetched here via a
+ *   dynamic import() instead, which is inherently async — every function
+ *   that talks to the database now awaits a shared "ready" promise first.
+ * - Neon's Managed Better Auth is in Beta as of this writing. If an auth
+ *   method below throws something unexpected, check
+ *   https://neon.com/docs/reference/javascript-sdk for the current API
+ *   surface of SupabaseAuthAdapter.
  */
 (function (global) {
   const PAGE_TYPES = ['about', 'privacy', 'terms', 'refund'];
+  const NEON_JS_CDN_URL = 'https://cdn.jsdelivr.net/npm/@neondatabase/neon-js@latest/+esm';
   let API_BASE = '/api';
   let supabase = null;
   let currentSession = null;
+  let readyPromise = null; // resolves once @neondatabase/neon-js has loaded and the client is created
   const authStateListeners = [];
+
+  // Every function below that touches the database or auth awaits this
+  // first. Resolves once the dynamically-imported client is ready;
+  // rejects (without throwing here) if init failed, so callers still get
+  // a normal, catchable Error instead of an unhandled rejection.
+  async function ready() {
+    if (readyPromise) await readyPromise.catch(() => {});
+    if (!supabase) throw new Error('App failed to start — reload the page.');
+    return supabase;
+  }
 
   function notifyAuthListeners() {
     const user = sessionToFirebaseUser(currentSession);
@@ -67,15 +95,26 @@
       uid: u.id,
       email: u.email,
       displayName: u.user_metadata?.name || u.user_metadata?.full_name || null,
-      getIdToken: async () => (await supabase.auth.getSession()).data.session?.access_token,
+      getIdToken: async () => (await (await ready()).auth.getSession()).data.session?.access_token,
     };
   }
 
   async function apiFetch(path, { method = 'GET', body } = {}) {
-    if (!supabase) throw new Error('App failed to start — reload the page.');
-    const session = (await supabase.auth.getSession()).data.session;
+    const sbClient = await ready();
+    const session = (await sbClient.auth.getSession()).data.session;
+    let accessToken = session?.access_token;
+    if (session && !accessToken && typeof sbClient.auth.token === 'function') {
+      // Some Managed Better Auth adapter versions don't put a bearer token
+      // on the session object itself (browser sessions are cookie-based by
+      // default) — auth.token() is Neon's documented way to get a raw JWT
+      // for calling an external API like this backend from a different
+      // origin. Falls back to this only if the Supabase-shaped session
+      // didn't already include one.
+      const { data } = await sbClient.auth.token();
+      accessToken = data?.token;
+    }
     const headers = { 'Content-Type': 'application/json' };
-    if (session) headers.Authorization = 'Bearer ' + session.access_token;
+    if (accessToken) headers.Authorization = 'Bearer ' + accessToken;
     const res = await fetch(API_BASE + path, {
       method,
       headers,
@@ -94,17 +133,13 @@
   // file header). Every RLS denial surfaces here as a normal thrown Error
   // with Postgres's real message, same as apiFetch does for the backend.
 
-  function sb() {
-    if (!supabase) throw new Error('App failed to start — reload the page.');
-    return supabase;
-  }
-
   function toEpoch(dateStr) {
     return dateStr ? new Date(dateStr).getTime() : null;
   }
 
   async function sbSelect(table, build, columns) {
-    let q = sb().from(table).select(columns || '*');
+    const sbClient = await ready();
+    let q = sbClient.from(table).select(columns || '*');
     if (build) q = build(q);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
@@ -112,7 +147,8 @@
   }
 
   async function sbSelectOne(table, build) {
-    let q = sb().from(table).select('*');
+    const sbClient = await ready();
+    let q = sbClient.from(table).select('*');
     if (build) q = build(q);
     const { data, error } = await q.maybeSingle();
     if (error) throw new Error(error.message);
@@ -120,23 +156,27 @@
   }
 
   async function sbInsert(table, row) {
-    const { data, error } = await sb().from(table).insert(row).select().single();
+    const sbClient = await ready();
+    const { data, error } = await sbClient.from(table).insert(row).select().single();
     if (error) throw new Error(error.message);
     return data;
   }
 
   async function sbUpdate(table, matchCol, matchVal, patch) {
-    const { error } = await sb().from(table).update(patch).eq(matchCol, matchVal);
+    const sbClient = await ready();
+    const { error } = await sbClient.from(table).update(patch).eq(matchCol, matchVal);
     if (error) throw new Error(error.message);
   }
 
   async function sbDelete(table, matchCol, matchVal) {
-    const { error } = await sb().from(table).delete().eq(matchCol, matchVal);
+    const sbClient = await ready();
+    const { error } = await sbClient.from(table).delete().eq(matchCol, matchVal);
     if (error) throw new Error(error.message);
   }
 
   async function sbUpsert(table, row, conflictCol) {
-    const { error } = await sb().from(table).upsert(row, { onConflict: conflictCol });
+    const sbClient = await ready();
+    const { error } = await sbClient.from(table).upsert(row, { onConflict: conflictCol });
     if (error) throw new Error(error.message);
   }
 
@@ -318,7 +358,8 @@
         setVal: async (arr) => {
           await sbDelete('Wishlist', 'userId', uid);
           if (Array.isArray(arr) && arr.length) {
-            const { error } = await sb().from('Wishlist').insert(arr.map((productId) => ({ userId: uid, productId })));
+            const sbClient = await ready();
+            const { error } = await sbClient.from('Wishlist').insert(arr.map((productId) => ({ userId: uid, productId })));
             if (error) throw new Error(error.message);
           }
         },
@@ -609,9 +650,9 @@
       get currentUser() {
         return sessionToFirebaseUser(currentSession);
       },
-      setPersistence: async () => {}, // Supabase persists sessions by default; no-op
-      signOut: () => supabase.auth.signOut(),
-      // Supabase auth calls resolve normally even on failure (wrong password,
+      setPersistence: async () => {}, // Session persistence is handled by the client by default; no-op
+      signOut: async () => (await ready()).auth.signOut(),
+      // Auth calls resolve normally even on failure (wrong password,
       // unconfirmed email, etc.) — the failure is just an `error` field on
       // the result. Firebase instead REJECTS the promise on failure and
       // resolves with a {user: {...}} shape on success. Without this
@@ -619,33 +660,39 @@
       // and .then(cred => cred.user.uid) crashes on success because the
       // shape doesn't match — which is what was actually breaking login/signup.
       signInWithEmailAndPassword: async (email, password) => {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const sbClient = await ready();
+        const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
         if (error) throw error;
         return { user: sessionToFirebaseUser({ user: data.user }) };
       },
       createUserWithEmailAndPassword: async (email, password) => {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const sbClient = await ready();
+        const { data, error } = await sbClient.auth.signUp({ email, password });
         if (error) throw error;
         if (!data.session) {
-          // Account was created, but Supabase's "Confirm email" setting is
-          // gating the session until the user clicks a link in their inbox —
-          // unlike Firebase, which logs a new user in immediately. To match
-          // the old app's instant-login-after-signup behavior, disable
-          // "Confirm email" in Supabase → Authentication → Providers → Email.
+          // Account was created, but email confirmation is gating the
+          // session until the user clicks a link in their inbox — unlike
+          // Firebase, which logs a new user in immediately. To match the
+          // old app's instant-login-after-signup behavior, look for the
+          // equivalent of "Confirm email" in Neon Auth's settings and
+          // disable it if you want signup to log the user straight in.
           throw new Error('Account created — check your email to confirm it, then log in.');
         }
         return { user: sessionToFirebaseUser({ user: data.user }) };
       },
       sendPasswordResetEmail: async (email) => {
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const sbClient = await ready();
+        const { error } = await sbClient.auth.resetPasswordForEmail(email);
         if (error) throw error;
       },
       signInWithPopup: async () => {
-        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' }); // Supabase OAuth always redirects; no true popup
+        const sbClient = await ready();
+        const { error } = await sbClient.auth.signInWithOAuth({ provider: 'google' }); // OAuth always redirects; no true popup
         if (error) throw error;
       },
       signInWithRedirect: async () => {
-        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+        const sbClient = await ready();
+        const { error } = await sbClient.auth.signInWithOAuth({ provider: 'google' });
         if (error) throw error;
       },
       getRedirectResult: async () => ({ user: sessionToFirebaseUser(currentSession) }),
@@ -674,11 +721,11 @@
 
   function validateConfig(config) {
     const problems = [];
-    if (!config.supabaseUrl || !/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.supabaseUrl.trim())) {
-      problems.push(`supabaseUrl looks wrong: "${config.supabaseUrl}" — should look like https://xxxxxxxx.supabase.co with no trailing slash, no spaces, no /rest or /auth suffix.`);
-    }
-    if (!config.supabaseAnonKey || config.supabaseAnonKey.trim().length < 20 || /your-anon|placeholder|xxxx/i.test(config.supabaseAnonKey)) {
-      problems.push(`supabaseAnonKey looks wrong or still a placeholder: "${config.supabaseAnonKey}".`);
+    if (
+      !config.neonUrl ||
+      !/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.neon\.(tech|build)\/.+/i.test(config.neonUrl.trim())
+    ) {
+      problems.push(`neonUrl looks wrong: "${config.neonUrl}" — should look like https://ep-xxxx.c-2.us-east-1.aws.neon.tech/neondb (the HTTPS form from Neon Console > Connect, no credentials, no query params, no trailing /rest/v1 or /auth).`);
     }
     if (!config.apiBase || !/^https?:\/\/.+\/api\/?$/i.test(config.apiBase.trim())) {
       problems.push(`apiBase looks wrong: "${config.apiBase}" — should end in /api, e.g. https://your-backend.onrender.com/api.`);
@@ -694,24 +741,31 @@
         return;
       }
       API_BASE = config.apiBase || API_BASE;
-      if (!global.supabase || typeof global.supabase.createClient !== 'function') {
-        showFatalBanner('Could not load required libraries (Supabase). Check your internet connection and reload the page.');
-        return;
-      }
-      try {
-        supabase = global.supabase.createClient(config.supabaseUrl.trim(), config.supabaseAnonKey.trim());
-      } catch (e) {
-        showFatalBanner('Supabase client failed to start: ' + e.message);
-        return;
-      }
-      supabase.auth.getSession().then(({ data }) => {
+      readyPromise = (async () => {
+        let createClient, SupabaseAuthAdapter;
+        try {
+          ({ createClient, SupabaseAuthAdapter } = await import(NEON_JS_CDN_URL));
+        } catch (e) {
+          showFatalBanner('Could not load required libraries (Neon). Check your internet connection and reload the page.');
+          throw e;
+        }
+        try {
+          supabase = createClient(config.neonUrl.trim(), {
+            auth: { adapter: SupabaseAuthAdapter() },
+          });
+        } catch (e) {
+          showFatalBanner('Neon client failed to start: ' + e.message);
+          throw e;
+        }
+        const { data } = await supabase.auth.getSession();
         currentSession = data.session;
         notifyAuthListeners();
-      }).catch((e) => showFatalBanner('Could not reach Supabase: ' + e.message));
-      supabase.auth.onAuthStateChange((_event, session) => {
-        currentSession = session;
-        notifyAuthListeners();
-      });
+        supabase.auth.onAuthStateChange((_event, session) => {
+          currentSession = session;
+          notifyAuthListeners();
+        });
+      })();
+      readyPromise.catch((e) => console.error('[nexustore-compat] init failed:', e));
     },
     auth,
     database,
