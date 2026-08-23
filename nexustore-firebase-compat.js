@@ -54,6 +54,7 @@
   let supabase = null;
   let currentSession = null;
   const authStateListeners = [];
+  const bannerShownForPath = new Set(); // avoids spamming the same error banner every 3s
 
   function notifyAuthListeners() {
     const user = sessionToFirebaseUser(currentSession);
@@ -505,9 +506,11 @@
     on(event, cb) {
       const handler = buildHandler(this.path, this.query);
       let prevJson = null;
+      let consecutiveFailures = 0;
       const poll = async () => {
         try {
           const val = await handler.get();
+          consecutiveFailures = 0;
           const json = JSON.stringify(val);
           if (event === 'value') {
             if (json !== prevJson) {
@@ -534,6 +537,19 @@
           }
         } catch (e) {
           console.error('[nexustore-compat] poll error for', this.path, e);
+          consecutiveFailures++;
+          // Before this fix, a failing query here (bad table name, missing
+          // RLS policy, wrong Supabase URL/key, etc.) failed silently —
+          // console.error only — forever, every 3s, with the page stuck
+          // showing its initial loading skeleton and no visible sign
+          // anything was wrong. Surfacing it after 2 failed attempts (~6s)
+          // turns that into a readable, actionable error instead of an
+          // unexplained infinite spinner. Shown once per path so it
+          // doesn't spam a new banner every 3 seconds.
+          if (consecutiveFailures >= 2 && !bannerShownForPath.has(this.path)) {
+            bannerShownForPath.add(this.path);
+            showFatalBanner(`Couldn't load "${this.path}" from Supabase: ${e.message}`);
+          }
         }
       };
       poll();
@@ -648,7 +664,35 @@
         const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
         if (error) throw error;
       },
-      getRedirectResult: async () => ({ user: sessionToFirebaseUser(currentSession) }),
+      getRedirectResult: async () => {
+        // Supabase bounces the browser back here with any failure appended
+        // as either a query string or (implicit-flow) hash fragment — e.g.
+        // ?error=server_error&error_description=... or
+        // #error=access_denied&error_description=Unsupported+provider....
+        // Real Firebase surfaces this by rejecting getRedirectResult().
+        // Without translating it here, a disabled/misconfigured Google
+        // provider in Supabase just silently bounces the user back to the
+        // page with no visible error at all — clicking "Continue with
+        // Google" LOOKS like it does nothing, when it's actually failing
+        // one step later, after the redirect.
+        const parseParams = (str) => new URLSearchParams(str.replace(/^[?#]/, ''));
+        const qp = parseParams(window.location.search);
+        const hp = parseParams(window.location.hash);
+        const errorDesc =
+          qp.get('error_description') || hp.get('error_description') || qp.get('error') || hp.get('error');
+        if (errorDesc) {
+          // Strip it out of the URL so refreshing or going back doesn't
+          // keep re-showing the same stale error.
+          const url = new URL(window.location.href);
+          url.search = '';
+          url.hash = '';
+          window.history.replaceState({}, '', url.toString());
+          const err = new Error(decodeURIComponent(errorDesc).replace(/\+/g, ' '));
+          err.code = 'auth/redirect-error';
+          throw err;
+        }
+        return { user: sessionToFirebaseUser(currentSession) };
+      },
     };
   }
   auth.GoogleAuthProvider = function GoogleAuthProvider() {};
