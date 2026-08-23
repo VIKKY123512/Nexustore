@@ -84,7 +84,7 @@
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || 'Request failed');
+      throw new Error((err.error || 'Request failed') + ` (HTTP ${res.status})`);
     }
     if (res.status === 204) return null;
     return res.json();
@@ -102,6 +102,18 @@
 
   function toEpoch(dateStr) {
     return dateStr ? new Date(dateStr).getTime() : null;
+  }
+
+  // Anime/cartoon-character style avatar, deterministic per seed (so the
+  // same user always gets the same picture without storing an image
+  // anywhere). avatarSeed lets a user "pick a new one" from the profile
+  // page's gallery (see index.html) without ever needing real file
+  // storage — shuffling just picks a new random seed string and saves
+  // that, and this function regenerates the same picture from it forever
+  // after. Falls back to the user's name/id if they've never picked one.
+  function avatarUrl(user) {
+    const seed = (user && (user.avatarSeed || user.name || user.id)) || 'guest';
+    return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}`;
   }
 
   async function sbSelect(table, build, columns) {
@@ -311,7 +323,22 @@
     // users -> User table (+ Wishlist for the embedded array, matching the
     // old app's currentUser.wishlist shape)
     if (path === 'users') {
-      return { get: async () => keyedObject(await sbSelect('User')) };
+      return {
+        get: async () => {
+          const rows = await sbSelect('User');
+          // Every row gets an avatar synthesized the same way the single-
+          // user handler below does — previously this bulk list (used by
+          // the admin panel's Manage Users / VIP / Online-Now pages) never
+          // set one at all, so every avatar there silently fell back to
+          // via.placeholder.com — a service that's no longer reliable —
+          // and showed as a broken/blank image everywhere.
+          return keyedObject(rows.map((u) => ({ ...u, avatar: avatarUrl(u) })));
+        },
+      };
+    }
+    if ((m = path.match(/^users\/([^/]+)\/avatarSeed$/))) {
+      const uid = m[1];
+      return { setVal: (v) => sbUpdate('User', 'id', uid, { avatarSeed: v }) };
     }
     if ((m = path.match(/^users\/([^/]+)\/wishlist$/))) {
       const uid = m[1];
@@ -349,7 +376,7 @@
           return {
             ...user,
             wishlist: (wishRows || []).map((r) => r.productId),
-            avatar: `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${encodeURIComponent(user.name || user.id)}`,
+            avatar: avatarUrl(user),
           };
         },
         setVal: (v) => sbUpdate('User', 'id', uid, { name: v.name }),
