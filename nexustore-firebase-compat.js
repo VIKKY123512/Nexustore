@@ -110,10 +110,60 @@
   // page's gallery (see index.html) without ever needing real file
   // storage — shuffling just picks a new random seed string and saves
   // that, and this function regenerates the same picture from it forever
-  // after. Falls back to the user's name/id if they've never picked one.
+  // after. A real uploaded photo (avatarUrl, via Supabase Storage — see
+  // uploadAvatarFile below) always takes priority over both when present.
+  // Falls back to the user's name/id if they've never picked or uploaded one.
   function avatarUrl(user) {
+    if (user && user.avatarUrl) return user.avatarUrl;
     const seed = (user && (user.avatarSeed || user.name || user.id)) || 'guest';
     return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}`;
+  }
+
+  const AVATAR_MAX_BYTES = 3 * 1024 * 1024; // matches the Storage bucket's file_size_limit in the setup SQL
+  const AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+  // Uploads a real photo to the "avatars" Storage bucket (see
+  // prisma/migration-003-avatar-upload.sql), at a path scoped to the
+  // uploading user's own folder — RLS policies on storage.objects enforce
+  // that server-side too, this check is just for a fast, friendly error
+  // instead of waiting on a round trip. Saves the resulting public URL onto
+  // the User row and returns it so the caller can update the UI immediately.
+  async function uploadAvatarFile(uid, file) {
+    if (!file || !AVATAR_MIME_TYPES.includes(file.type)) {
+      throw new Error('Please choose a JPG, PNG, WEBP, or GIF image.');
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      throw new Error('Image is too large — please choose one under 3MB.');
+    }
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const path = `${uid}/avatar-${Date.now()}.${ext}`;
+    const { error: upErr } = await sb().storage.from('avatars').upload(path, file, {
+      upsert: true,
+      cacheControl: '3600',
+      contentType: file.type,
+    });
+    if (upErr) throw new Error(upErr.message);
+    const { data } = sb().storage.from('avatars').getPublicUrl(path);
+    const publicUrl = data.publicUrl;
+    await sbUpdate('User', 'id', uid, { avatarUrl: publicUrl });
+    return publicUrl;
+  }
+
+  // Deletes the stored file too, not just the DB reference, so the bucket
+  // doesn't quietly accumulate orphaned images every time someone changes
+  // their photo or reverts to a generated avatar.
+  async function removeAvatarFile(uid, currentUrl) {
+    await sbUpdate('User', 'id', uid, { avatarUrl: null });
+    if (!currentUrl) return;
+    try {
+      const marker = '/avatars/';
+      const idx = currentUrl.indexOf(marker);
+      if (idx === -1) return;
+      const path = decodeURIComponent(currentUrl.slice(idx + marker.length).split('?')[0]);
+      await sb().storage.from('avatars').remove([path]);
+    } catch (e) {
+      console.error('[nexustore-compat] could not remove old avatar file (non-fatal):', e);
+    }
   }
 
   async function sbSelect(table, build, columns) {
@@ -338,7 +388,11 @@
     }
     if ((m = path.match(/^users\/([^/]+)\/avatarSeed$/))) {
       const uid = m[1];
-      return { setVal: (v) => sbUpdate('User', 'id', uid, { avatarSeed: v }) };
+      return { setVal: (v) => sbUpdate('User', 'id', uid, { avatarSeed: v, avatarUrl: null }) };
+    }
+    if ((m = path.match(/^users\/([^/]+)\/avatarUrl$/))) {
+      const uid = m[1];
+      return { setVal: (v) => sbUpdate('User', 'id', uid, { avatarUrl: v }) };
     }
     if ((m = path.match(/^users\/([^/]+)\/wishlist$/))) {
       const uid = m[1];
@@ -786,5 +840,9 @@
     },
     auth,
     database,
+    storage: {
+      uploadAvatar: uploadAvatarFile,
+      removeAvatar: removeAvatarFile,
+    },
   };
 })(window);
