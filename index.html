@@ -1851,7 +1851,7 @@
             // onAuthStateChanged handles the success path either way; this only
             // needs to surface an error if the redirect itself failed.
             auth.getRedirectResult().catch((err) => {
-                if (err && err.code) showToast("Google Sign-In Failed", "error");
+                if (err && err.code) showToast(err.message || "Google Sign-In Failed", "error");
             });
             function userLogin() {
                 const e = document.getElementById("login-email").value;
