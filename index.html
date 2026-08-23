@@ -1400,7 +1400,31 @@
                     <div class="modal-title">Choose Avatar</div>
                     <button class="close-btn" onclick="toggleModal('modal-avatar-gallery', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
-                <p style="color: var(--text-sub); font-size: 0.85rem; margin: 0 0 15px;">Tap one to pick it, or shuffle for more options.</p>
+
+                <input type="file" id="avatar-upload-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display: none" onchange="handleAvatarUpload(this)" />
+                <button
+                    id="avatar-upload-btn"
+                    class="btn-main"
+                    style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;"
+                    onclick="document.getElementById('avatar-upload-input').click()"
+                >
+                    <i class="fas fa-image"></i> Upload Your Own Photo
+                </button>
+                <button
+                    id="avatar-remove-btn"
+                    class="btn-sec"
+                    style="display: none; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px; color: #f87171;"
+                    onclick="handleAvatarRemove()"
+                >
+                    <i class="fas fa-trash"></i> Remove Photo
+                </button>
+
+                <div style="display: flex; align-items: center; gap: 10px; margin: 5px 0 15px; color: var(--text-sub); font-size: 0.8rem;">
+                    <div style="flex: 1; height: 1px; background: var(--glass-border)"></div>
+                    or pick a generated one
+                    <div style="flex: 1; height: 1px; background: var(--glass-border)"></div>
+                </div>
+
                 <div id="avatar-gallery-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px;"></div>
                 <button class="btn-sec" style="display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="renderAvatarGallery()">
                     <i class="fas fa-shuffle"></i> Shuffle
@@ -2761,16 +2785,18 @@
                 }
                 toggleModal("modal-profile", false);
             }
-            // Avatar "gallery": rather than a real file upload (which would need
-            // Supabase Storage set up), this shows 9 randomly-generated
-            // cartoon-character avatars to choose from — pick one and it's saved
-            // as a seed string (User.avatarSeed), which always regenerates the
-            // exact same picture. Shuffle for a fresh set of 9 any time.
+            // Avatar picker: a real-photo upload (via Supabase Storage, see
+            // prisma/migration-003-avatar-upload.sql) alongside a gallery of
+            // 9 randomly-generated cartoon-character avatars. Picking a
+            // generated one clears any uploaded photo, and vice versa — the
+            // two are mutually exclusive, so avatarUrl() in the compat shim
+            // always has one unambiguous answer for "what's this user's picture".
             function openAvatarGallery() {
                 if (!currentUser) {
                     openAuth();
                     return;
                 }
+                document.getElementById("avatar-remove-btn").style.display = currentUser.avatarUrl ? "flex" : "none";
                 toggleModal("modal-avatar-gallery", true);
                 renderAvatarGallery();
             }
@@ -2794,12 +2820,49 @@
                     .then(() => {
                         currentUser.avatar = url;
                         currentUser.avatarSeed = seed;
+                        currentUser.avatarUrl = null;
                         document.getElementById("hud-avatar").src = url;
                         document.getElementById("edit-avatar-img").src = url;
                         toggleModal("modal-avatar-gallery", false);
                         showToast("Avatar Updated", "success");
                     })
                     .catch((err) => showToast(err.message || "Couldn't save avatar", "error"));
+            }
+            function handleAvatarUpload(input) {
+                const file = input.files && input.files[0];
+                input.value = ""; // lets picking the same file again re-fire onchange
+                if (!file || !currentUser) return;
+                const btn = document.getElementById("avatar-upload-btn");
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+                firebase.storage
+                    .uploadAvatar(currentUser.id, file)
+                    .then((url) => {
+                        currentUser.avatar = url;
+                        currentUser.avatarUrl = url;
+                        document.getElementById("hud-avatar").src = url;
+                        document.getElementById("edit-avatar-img").src = url;
+                        toggleModal("modal-avatar-gallery", false);
+                        showToast("Photo Uploaded", "success");
+                    })
+                    .catch((err) => showToast(err.message || "Upload failed", "error"))
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    });
+            }
+            function handleAvatarRemove() {
+                if (!currentUser) return;
+                firebase.storage
+                    .removeAvatar(currentUser.id, currentUser.avatarUrl)
+                    .then(() => {
+                        currentUser.avatarUrl = null;
+                        renderAvatarGallery(); // no seed picked yet -> shows a fresh generated set to choose from
+                        document.getElementById("avatar-remove-btn").style.display = "none";
+                        showToast("Photo Removed", "success");
+                    })
+                    .catch((err) => showToast(err.message || "Couldn't remove photo", "error"));
             }
             function openSupport() {
                 if (!currentUser) {
