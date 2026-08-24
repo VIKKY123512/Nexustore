@@ -54,10 +54,24 @@
   let supabase = null;
   let currentSession = null;
   const authStateListeners = [];
-  const bannerShownForPath = new Set(); // avoids spamming the same error banner every 3s
+  const bannerShownForPath = new Map(); // path -> true while a banner is showing; cleared automatically once that path recovers
+  let lastNotifiedUid; // undefined = never notified yet (distinct from null = "known logged out")
 
   function notifyAuthListeners() {
     const user = sessionToFirebaseUser(currentSession);
+    const uid = user ? user.uid : null;
+    // Supabase's client fires onAuthStateChange for far more than just
+    // "user logged in or out" — token refreshes, tab-focus revalidation,
+    // and its own initial-session check on page load all trigger it too,
+    // and each one used to re-run every registered onAuthStateChanged
+    // callback in full. That's what was showing "Signed In" (and
+    // re-registering listeners like attachOrdersListener, each of which
+    // tears down and restarts its own polling from scratch) two or three
+    // times per page load — once per redundant re-fire, all for the exact
+    // same already-logged-in user. Only forward it when the signed-in
+    // identity has actually changed.
+    if (uid === lastNotifiedUid) return;
+    lastNotifiedUid = uid;
     authStateListeners.forEach((cb) => cb(user));
   }
 
@@ -591,6 +605,16 @@
       const poll = async () => {
         try {
           const val = await handler.get();
+          if (consecutiveFailures > 0 && bannerShownForPath.has(this.path)) {
+            // Recovered after showing an error — clear it rather than
+            // leaving a stale "couldn't load" message for something that
+            // just worked. This is what a transient network blip on a
+            // mobile connection looks like: fails a couple times, then
+            // loads fine — previously that left a permanent-looking red
+            // banner on screen even though the data was actually current.
+            bannerShownForPath.delete(this.path);
+            clearBanner(this.path);
+          }
           consecutiveFailures = 0;
           const json = JSON.stringify(val);
           if (event === 'value') {
@@ -623,13 +647,16 @@
           // RLS policy, wrong Supabase URL/key, etc.) failed silently —
           // console.error only — forever, every 3s, with the page stuck
           // showing its initial loading skeleton and no visible sign
-          // anything was wrong. Surfacing it after 2 failed attempts (~6s)
-          // turns that into a readable, actionable error instead of an
-          // unexplained infinite spinner. Shown once per path so it
-          // doesn't spam a new banner every 3 seconds.
-          if (consecutiveFailures >= 2 && !bannerShownForPath.has(this.path)) {
-            bannerShownForPath.add(this.path);
-            showFatalBanner(`Couldn't load "${this.path}" from Supabase: ${e.message}`);
+          // anything was wrong. Surfacing it after several failed attempts
+          // in a row (~12s) turns that into a readable, actionable error
+          // instead of an unexplained infinite spinner, while giving a
+          // single slow/dropped request or two on a shaky mobile
+          // connection room to just... work on the next try, which is by
+          // far the most common case and shouldn't alarm anyone. Shown
+          // once per path, and auto-cleared above the moment it recovers.
+          if (consecutiveFailures >= 4 && !bannerShownForPath.has(this.path)) {
+            bannerShownForPath.set(this.path, true);
+            showFatalBanner(`Couldn't load "${this.path}" from Supabase: ${e.message}`, this.path);
           }
         }
       };
@@ -788,13 +815,23 @@
     return { ref: (path) => new RefShim(path) };
   }
 
-  function showFatalBanner(message) {
+  function showFatalBanner(message, id) {
     const banner = document.createElement('div');
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#dc2626;color:#fff;padding:12px;text-align:center;font-family:sans-serif;font-size:14px;word-break:break-all;';
     banner.textContent = message;
+    if (id) banner.dataset.bannerId = id;
     const attach = () => document.body.prepend(banner);
     document.body ? attach() : window.addEventListener('DOMContentLoaded', attach);
     console.error('[nexustore-compat] ' + message);
+    return banner;
+  }
+
+  // Removes a banner previously shown with a given id — used to auto-clear
+  // a transient-failure banner once that same path successfully loads
+  // again, instead of leaving a stale "couldn't load" message on screen
+  // for something that's actually working now.
+  function clearBanner(id) {
+    document.querySelectorAll(`[data-banner-id="${CSS && CSS.escape ? CSS.escape(id) : id}"]`).forEach((el) => el.remove());
   }
 
   function validateConfig(config) {
@@ -829,10 +866,14 @@
         showFatalBanner('Supabase client failed to start: ' + e.message);
         return;
       }
-      supabase.auth.getSession().then(({ data }) => {
-        currentSession = data.session;
-        notifyAuthListeners();
-      }).catch((e) => showFatalBanner('Could not reach Supabase: ' + e.message));
+      supabase.auth.getSession().catch((e) => showFatalBanner('Could not reach Supabase: ' + e.message));
+      // Deliberately NOT also calling notifyAuthListeners() here — Supabase's
+      // client already fires onAuthStateChange immediately upon subscribing
+      // below, with whatever the current session is (event: INITIAL_SESSION),
+      // so doing it again here was the other half of the duplicate-fire bug
+      // described above. getSession() above is kept only so a genuinely
+      // broken connection still surfaces as a banner even if that first
+      // onAuthStateChange callback never arrives at all.
       supabase.auth.onAuthStateChange((_event, session) => {
         currentSession = session;
         notifyAuthListeners();
