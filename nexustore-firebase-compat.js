@@ -86,12 +86,32 @@
     };
   }
 
+  // A raw network failure (not an HTTP error response — this is a plain
+  // fetch() rejection, before any status code exists) almost always means
+  // the backend host is mid cold-start: free-tier hosts like Render's free
+  // plan spin a sleeping instance down after inactivity and take anywhere
+  // from a few seconds to ~60s to wake back up, during which connections
+  // get refused or time out. One retry after a pause gives it a real
+  // chance to finish waking up instead of immediately surfacing a scary
+  // "failed" banner for what is, on a free host, completely normal
+  // first-request latency. This does NOT retry on an actual HTTP error
+  // response (401, 403, 500, etc.) — those got a real answer from a
+  // reachable server and retrying won't change that answer.
+  async function fetchWithColdStartRetry(url, opts) {
+    try {
+      return await fetch(url, opts);
+    } catch (e) {
+      await new Promise((r) => setTimeout(r, 4000));
+      return fetch(url, opts);
+    }
+  }
+
   async function apiFetch(path, { method = 'GET', body } = {}) {
     if (!supabase) throw new Error('App failed to start — reload the page.');
     const session = (await supabase.auth.getSession()).data.session;
     const headers = { 'Content-Type': 'application/json' };
     if (session) headers.Authorization = 'Bearer ' + session.access_token;
-    const res = await fetch(API_BASE + path, {
+    const res = await fetchWithColdStartRetry(API_BASE + path, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -453,10 +473,10 @@
       };
     }
 
-    // messages (support ticket thread) -> Message table. RLS restricts a
-    // regular user's SELECT to their own rows automatically, so the same
-    // query works for both "my thread" and "admin sees everyone" — no
-    // separate endpoint needed.
+    // messages (support tickets) -> Message table. RLS restricts a regular
+    // user's SELECT to their own rows automatically, so the same query
+    // works for both "my tickets" and "admin sees everyone" — no separate
+    // endpoint needed.
     function serializeMessageRow(m) {
       return {
         id: m.id,
@@ -465,6 +485,8 @@
         userEmail: m.User?.email ?? null,
         title: m.title,
         body: m.body,
+        category: m.category,
+        status: m.status || 'open',
         imageData: m.imageData,
         reply: m.reply,
         replyTime: toEpoch(m.replyTime),
@@ -486,13 +508,33 @@
           );
           return keyedObject(rows.map(serializeMessageRow));
         },
-        push: (v) => sbInsert('Message', { userId: currentUid(), title: v.title, body: v.body, imageData: v.imageData }),
+        push: (v) =>
+          sbInsert('Message', {
+            userId: currentUid(),
+            title: v.title,
+            body: v.body,
+            category: v.category || null,
+            imageData: v.imageData,
+            status: 'open',
+          }),
       };
     }
     if ((m = path.match(/^messages\/(.+)$/))) {
       const id = m[1];
       return {
-        updateVal: (v) => sbUpdate('Message', 'id', id, { reply: v.reply, replyTime: new Date().toISOString() }),
+        // Replying auto-resolves the ticket; admin can also flip status on
+        // its own (reopen, or resolve without replying) via updateVal with
+        // just { status }.
+        updateVal: (v) => {
+          const patch = {};
+          if (v.reply !== undefined) {
+            patch.reply = v.reply;
+            patch.replyTime = new Date().toISOString();
+            patch.status = 'resolved';
+          }
+          if (v.status !== undefined) patch.status = v.status;
+          return sbUpdate('Message', 'id', id, patch);
+        },
         removeVal: () => sbDelete('Message', 'id', id),
       };
     }
