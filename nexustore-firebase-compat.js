@@ -444,6 +444,15 @@
       const uid = m[1];
       return { get: () => sbSelectOne('User', (q) => q.eq('id', uid)).then((u) => u?.status ?? null) };
     }
+    // Google OAuth sessions carry the account's Google profile picture in
+    // user_metadata (Supabase populates both avatar_url and picture from
+    // Google's own OAuth response — check both since the exact field has
+    // varied across supabase-js versions).
+    function googleAvatarFromSession() {
+      const meta = currentSession?.user?.user_metadata;
+      return meta?.avatar_url || meta?.picture || null;
+    }
+
     if ((m = path.match(/^users\/([^/]+)$/))) {
       const uid = m[1];
       return {
@@ -457,7 +466,19 @@
               id: uid,
               email: u?.email || null,
               name: u?.displayName || u?.email?.split('@')[0] || null,
+              avatarUrl: googleAvatarFromSession(), // null for email/password signups — falls back to a generated avatar as usual
             });
+          } else if (user && uid === currentUid() && !user.avatarUrl && !user.avatarSeed) {
+            // Existing account, no photo/generated-avatar choice made yet
+            // (e.g. signed up with email/password originally, then later
+            // signed in with Google — or signed up with Google before this
+            // feature existed). Backfill their Google picture once; never
+            // overwrites a photo they uploaded or a gallery pick they made.
+            const googleAvatar = googleAvatarFromSession();
+            if (googleAvatar) {
+              await sbUpdate('User', 'id', uid, { avatarUrl: googleAvatar });
+              user = { ...user, avatarUrl: googleAvatar };
+            }
           }
           if (!user) return null;
           const wishRows = await sbSelect('Wishlist', (q) => q.eq('userId', uid));
@@ -698,10 +719,11 @@
           // once per path, and auto-cleared above the moment it recovers.
           if (consecutiveFailures >= 4 && !bannerShownForPath.has(this.path)) {
             bannerShownForPath.set(this.path, true);
-            showFatalBanner(`Couldn't load "${this.path}" from Supabase: ${e.message}`, this.path);
+            showFatalBanner(`Couldn't load "${this.path}" from ${describeFailedSource(this.path)}: ${e.message}`, this.path);
           }
         }
       };
+      retryHandlers.set(this.path, poll);
       poll();
       const intervalId = setInterval(poll, 3000);
       if (!this._listeners.has(event)) this._listeners.set(event, new Set());
@@ -857,10 +879,33 @@
     return { ref: (path) => new RefShim(path) };
   }
 
+  // These paths are served by nexustore-backend (Express), not queried
+  // from Supabase directly — order creation/verification, secure download
+  // links, and admin logs all need real server-side logic. A failure here
+  // means the BACKEND is unreachable, which is a completely different
+  // thing to check than a Supabase problem, so the banner says so instead
+  // of blaming Supabase for something Supabase had no part in.
+  const BACKEND_ROUTED_PATH = /^(orders(\/|$)|downloads_log$|trash(\/|$))/;
+
+  function describeFailedSource(path) {
+    return BACKEND_ROUTED_PATH.test(path) ? `your backend server (${API_BASE})` : 'Supabase';
+  }
+
+  const retryHandlers = new Map(); // path -> its poll() function, so the banner's Retry button can trigger an immediate re-check
+
   function showFatalBanner(message, id) {
     const banner = document.createElement('div');
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#dc2626;color:#fff;padding:12px;text-align:center;font-family:sans-serif;font-size:14px;word-break:break-all;';
-    banner.textContent = message;
+    const text = document.createElement('span');
+    text.textContent = message;
+    banner.appendChild(text);
+    if (id && retryHandlers.has(id)) {
+      const retryBtn = document.createElement('button');
+      retryBtn.textContent = 'Retry now';
+      retryBtn.style.cssText = 'margin-left:12px;background:#fff;color:#dc2626;border:none;border-radius:6px;padding:4px 12px;font-weight:600;cursor:pointer;font-size:13px;';
+      retryBtn.onclick = () => retryHandlers.get(id)?.();
+      banner.appendChild(retryBtn);
+    }
     if (id) banner.dataset.bannerId = id;
     const attach = () => document.body.prepend(banner);
     document.body ? attach() : window.addEventListener('DOMContentLoaded', attach);
