@@ -903,7 +903,25 @@
       const retryBtn = document.createElement('button');
       retryBtn.textContent = 'Retry now';
       retryBtn.style.cssText = 'margin-left:12px;background:#fff;color:#dc2626;border:none;border-radius:6px;padding:4px 12px;font-weight:600;cursor:pointer;font-size:13px;';
-      retryBtn.onclick = () => retryHandlers.get(id)?.();
+      retryBtn.onclick = () => {
+        // Give explicit feedback on click — previously this called poll()
+        // with zero visible response, so if the retry ALSO failed (the
+        // underlying issue hadn't actually cleared yet), it looked
+        // indistinguishable from the button not working at all. Success
+        // still auto-clears this whole banner from the poll() success path;
+        // this just guarantees the click itself is never ambiguous either way.
+        retryBtn.disabled = true;
+        retryBtn.textContent = 'Retrying...';
+        const fn = retryHandlers.get(id);
+        Promise.resolve(fn ? fn() : null).finally(() => {
+          // If it succeeded, poll() already removed this banner from the DOM
+          // — these lines only run if the banner (and this button) still exist.
+          if (retryBtn.isConnected) {
+            retryBtn.disabled = false;
+            retryBtn.textContent = 'Retry now';
+          }
+        });
+      };
       banner.appendChild(retryBtn);
     }
     if (id) banner.dataset.bannerId = id;
