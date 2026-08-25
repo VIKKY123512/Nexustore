@@ -430,6 +430,30 @@
                 gap: 14px 10px;
                 contain: layout style;
             }
+            .profile-menu-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 16px;
+                border-bottom: 1px solid var(--glass-border);
+                cursor: pointer;
+                transition: background 0.15s ease;
+            }
+            .profile-menu-row:active { background: rgba(255, 255, 255, 0.04); }
+            .profile-menu-icon {
+                width: 38px;
+                height: 38px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                font-size: 1rem;
+            }
+            .profile-menu-text { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; }
+            .profile-menu-text span { font-size: 0.75rem; color: var(--text-sub); font-weight: 400; }
+            .profile-menu-chevron { color: var(--text-sub); font-size: 0.8rem; }
+
             .card {
                 background: var(--card-bg);
                 border: 1px solid rgba(59, 130, 246, 0.16);
@@ -1327,71 +1351,142 @@
             </div>
         </div>
         <div id="modal-profile" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
+            <div class="modal-content" style="padding: 0; overflow: hidden;">
+                <div class="modal-header" style="padding: 16px 20px 0;">
                     <div class="modal-title">Profile</div>
                     <button class="close-btn" onclick="toggleModal('modal-profile', false)"><i class="fas fa-arrow-left"></i></button>
                 </div>
-                <div style="text-align: center; margin-bottom: 25px">
-                    <img
-                        id="edit-avatar-img"
-                        src=""
+
+                <div style="padding: 20px;">
+                    <!-- Gradient hero card -->
+                    <div
                         style="
-                            width: 100px;
-                            height: 100px;
-                            border-radius: 50%;
-                            margin-bottom: 8px;
-                            background: var(--bg-color);
-                            border: 4px solid #10b981;
-                            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+                            background: linear-gradient(135deg, #3b82f6, #10b981);
+                            border-radius: 20px;
+                            padding: 28px 20px 22px;
+                            text-align: center;
+                            position: relative;
+                            overflow: hidden;
                         "
-                    />
-                    <div style="margin-bottom: 15px">
-                        <button
-                            type="button"
-                            class="btn-sec"
-                            style="padding: 6px 16px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; width: auto;"
-                            onclick="openAvatarGallery()"
-                        ><i class="fas fa-shuffle"></i> Change Avatar</button>
+                    >
+                        <img
+                            id="edit-avatar-img"
+                            src=""
+                            style="
+                                width: 90px;
+                                height: 90px;
+                                border-radius: 50%;
+                                margin-bottom: 10px;
+                                background: rgba(255, 255, 255, 0.15);
+                                border: 4px solid rgba(255, 255, 255, 0.85);
+                                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+                            "
+                        />
+                        <div>
+                            <button
+                                type="button"
+                                style="
+                                    background: rgba(255, 255, 255, 0.2);
+                                    border: 1px solid rgba(255, 255, 255, 0.5);
+                                    color: #fff;
+                                    padding: 5px 14px;
+                                    font-size: 0.75rem;
+                                    border-radius: 20px;
+                                    display: inline-flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                    margin-bottom: 12px;
+                                    cursor: pointer;
+                                "
+                                onclick="openAvatarGallery()"
+                            ><i class="fas fa-shuffle"></i> Change Avatar</button>
+                        </div>
+                        <h3 id="edit-name-display" style="margin: 0; font-size: 1.3rem; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.2);">Guest</h3>
+                        <p id="edit-email-display" style="color: rgba(255,255,255,0.85); font-size: 0.85rem; margin: 4px 0 0;">-</p>
                     </div>
-                    <h3 id="edit-name-display" style="margin: 0; font-size: 1.4rem">Guest</h3>
-                    <p id="edit-email-display" style="color: var(--text-sub); font-size: 0.9rem; margin: 5px 0 0">-</p>
+
+                    <!-- Stat pills -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0 20px;">
+                        <div style="background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 4px; text-align: center;">
+                            <i class="fas fa-wallet" style="color: #f59e0b; font-size: 1.1rem;"></i>
+                            <div id="stat-wallet" style="font-size: 1rem; font-weight: 700; margin-top: 6px;">₹0</div>
+                            <div style="font-size: 0.65rem; color: var(--text-sub);">Wallet</div>
+                        </div>
+                        <div style="background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 4px; text-align: center;">
+                            <i class="fas fa-bag-shopping" style="color: #3b82f6; font-size: 1.1rem;"></i>
+                            <div id="stat-orders" style="font-size: 1rem; font-weight: 700; margin-top: 6px;">0</div>
+                            <div style="font-size: 0.65rem; color: var(--text-sub);">Orders</div>
+                        </div>
+                        <div style="background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 4px; text-align: center;">
+                            <i class="fas fa-heart" style="color: #ef4444; font-size: 1.1rem;"></i>
+                            <div id="stat-wishlist" style="font-size: 1rem; font-weight: 700; margin-top: 6px;">0</div>
+                            <div style="font-size: 0.65rem; color: var(--text-sub);">Wishlist</div>
+                        </div>
+                        <div style="background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 4px; text-align: center;">
+                            <i class="fas fa-download" style="color: #10b981; font-size: 1.1rem;"></i>
+                            <div id="stat-downloads" style="font-size: 1rem; font-weight: 700; margin-top: 6px;">0</div>
+                            <div style="font-size: 0.65rem; color: var(--text-sub);">Downloads Today</div>
+                        </div>
+                    </div>
+
+                    <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-sub); margin-left: 5px">DISPLAY NAME</label>
+                    <input type="text" id="edit-name" class="inp" placeholder="Name" />
+                    <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-sub); margin-left: 5px">GENDER</label>
+                    <select id="edit-gender" class="inp">
+                        <option value="Not Specified">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                    <button class="btn-main" onclick="saveProfile()">Save Changes</button>
+
+                    <!-- Grouped settings list -->
+                    <div style="background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 16px; margin: 20px 0 0; overflow: hidden;">
+                        <div class="profile-menu-row" onclick="openPurchases(); toggleModal('modal-profile', false);">
+                            <div class="profile-menu-icon" style="background: rgba(59,130,246,0.15); color: #3b82f6;"><i class="fas fa-bag-shopping"></i></div>
+                            <div class="profile-menu-text"><strong>My Orders</strong><span>View your purchases &amp; downloads</span></div>
+                            <i class="fas fa-chevron-right profile-menu-chevron"></i>
+                        </div>
+                        <div class="profile-menu-row" onclick="openWishlist(); toggleModal('modal-profile', false);">
+                            <div class="profile-menu-icon" style="background: rgba(239,68,68,0.15); color: #ef4444;"><i class="fas fa-heart"></i></div>
+                            <div class="profile-menu-text"><strong>Wishlist</strong><span>Products you've saved</span></div>
+                            <i class="fas fa-chevron-right profile-menu-chevron"></i>
+                        </div>
+                        <div class="profile-menu-row" onclick="toggleModal('modal-profile', false); openSupport();">
+                            <div class="profile-menu-icon" style="background: rgba(16,185,129,0.15); color: #10b981;"><i class="fas fa-headset"></i></div>
+                            <div class="profile-menu-text"><strong>Support Tickets</strong><span>Get help with an issue</span></div>
+                            <i class="fas fa-chevron-right profile-menu-chevron"></i>
+                        </div>
+                        <div class="profile-menu-row" onclick="openPage('about')">
+                            <div class="profile-menu-icon" style="background: rgba(139,92,246,0.15); color: #8b5cf6;"><i class="fas fa-circle-info"></i></div>
+                            <div class="profile-menu-text"><strong>About</strong><span>Learn more about NexusStore</span></div>
+                            <i class="fas fa-chevron-right profile-menu-chevron"></i>
+                        </div>
+                        <div class="profile-menu-row" onclick="openPage('privacy')">
+                            <div class="profile-menu-icon" style="background: rgba(59,130,246,0.15); color: #3b82f6;"><i class="fas fa-shield-halved"></i></div>
+                            <div class="profile-menu-text"><strong>Privacy Policy</strong></div>
+                            <i class="fas fa-chevron-right profile-menu-chevron"></i>
+                        </div>
+                        <div class="profile-menu-row" onclick="openPage('terms')">
+                            <div class="profile-menu-icon" style="background: rgba(59,130,246,0.15); color: #3b82f6;"><i class="fas fa-file-contract"></i></div>
+                            <div class="profile-menu-text"><strong>Terms of Service</strong></div>
+                            <i class="fas fa-chevron-right profile-menu-chevron"></i>
+                        </div>
+                        <div class="profile-menu-row" style="border-bottom: none;" onclick="openPage('refund')">
+                            <div class="profile-menu-icon" style="background: rgba(245,158,11,0.15); color: #f59e0b;"><i class="fas fa-file-invoice-dollar"></i></div>
+                            <div class="profile-menu-text"><strong>Refund Policy</strong></div>
+                            <i class="fas fa-chevron-right profile-menu-chevron"></i>
+                        </div>
+                    </div>
+
+                    <div id="social-container" style="display: flex; justify-content: center; gap: 15px; margin: 20px 0; flex-wrap: wrap"></div>
+
+                    <button id="join-comm-btn" class="btn-sec" style="color: var(--success); border-color: var(--success); margin-bottom: 12px">
+                        <i class="fas fa-users"></i> Join Community
+                    </button>
+                    <button id="profile-action-btn" class="btn-main" style="background: var(--danger); box-shadow: none; margin-bottom: 4px;" onclick="handleAuthAction()">
+                        Logout
+                    </button>
                 </div>
-                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-sub); margin-left: 5px"
-                    >DISPLAY NAME</label
-                ><input type="text" id="edit-name" class="inp" placeholder="Name" /><label
-                    style="font-size: 0.8rem; font-weight: 600; color: var(--text-sub); margin-left: 5px"
-                    >GENDER</label
-                ><select id="edit-gender" class="inp">
-                    <option value="Not Specified">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option></select
-                ><button class="btn-main" onclick="saveProfile()">Save Changes</button
-                ><button
-                    id="join-comm-btn"
-                    class="btn-sec"
-                    style="color: var(--success); border-color: var(--success); margin-bottom: 20px"
-                >
-                    <i class="fas fa-users"></i> Join Community
-                </button>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin: 20px 0">
-                    <button class="btn-sec" style="padding: 10px 4px; font-size: 0.85rem;" onclick="openPage('about')">About</button
-                    ><button class="btn-sec" style="padding: 10px 4px; font-size: 0.85rem;" onclick="openPage('privacy')">Privacy</button
-                    ><button class="btn-sec" style="padding: 10px 4px; font-size: 0.85rem;" onclick="openPage('terms')">Terms</button
-                    ><button class="btn-sec" style="padding: 10px 4px; font-size: 0.85rem;" onclick="openPage('refund')">Refund</button>
-                </div>
-                <div
-                    id="social-container"
-                    style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap"
-                ></div>
-                <button
-                    id="profile-action-btn"
-                    class="btn-main"
-                    style="background: var(--danger); box-shadow: none"
-                    onclick="handleAuthAction()"
-                >
-                    Logout
-                </button>
             </div>
         </div>
         <div id="modal-avatar-gallery" class="modal">
@@ -2140,6 +2235,7 @@
                         });
                         
                         currentUserOrders = next;
+                        updateProfileStats();
                         
                         if (!ordersFirstLoad) {
                             Object.entries(next).forEach(([productId, order]) => {
@@ -2377,7 +2473,31 @@
                         });
                     };
                 }
+                updateProfileStats();
                 document.getElementById("nav-purchases").style.display = currentUser ? "flex" : "none";
+            }
+            // Keeps the Profile modal's stat pills (Wallet/Orders/Wishlist/
+            // Downloads) current — called from syncUserUI() and again from
+            // attachOrdersListener() below whenever fresh order data comes in,
+            // since orders load asynchronously after login rather than being
+            // part of the currentUser object itself.
+            function updateProfileStats() {
+                const walletEl = document.getElementById("stat-wallet");
+                const ordersEl = document.getElementById("stat-orders");
+                const wishlistEl = document.getElementById("stat-wishlist");
+                const downloadsEl = document.getElementById("stat-downloads");
+                if (!walletEl) return;
+                if (!currentUser) {
+                    walletEl.innerText = "₹0";
+                    ordersEl.innerText = "0";
+                    wishlistEl.innerText = "0";
+                    downloadsEl.innerText = "0";
+                    return;
+                }
+                walletEl.innerText = "₹" + (currentUser.wallet || 0);
+                ordersEl.innerText = Object.keys(currentUserOrders || {}).length;
+                wishlistEl.innerText = (currentUser.wishlist || []).length;
+                downloadsEl.innerText = currentUser.dailyDownloads || 0;
             }
             function handleAuthAction() {}
             function navTo(page, skipHistory = false) {
