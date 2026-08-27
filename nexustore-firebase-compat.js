@@ -216,14 +216,34 @@
     return data;
   }
 
+  // The app throughout was written in Firebase/RTDB style, where any field
+  // is normally just `Date.now()` — a plain number. Real Postgres
+  // `timestamp` columns reject a raw number outright (a type error, not a
+  // graceful coercion), so any write carrying e.g. `createdAt: Date.now()`
+  // was failing at the database level. Rather than hunt down and fix every
+  // individual `Date.now()` call site across two large HTML files (an
+  // easy one to miss and reintroduce later), every write goes through
+  // sbInsert/sbUpdate/sbUpsert, so normalizing it once here covers all of
+  // them, including future ones.
+  function normalizeTimestamps(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    const out = { ...obj };
+    for (const key of Object.keys(out)) {
+      if (/(At|Time|Date)$/.test(key) && typeof out[key] === 'number') {
+        out[key] = new Date(out[key]).toISOString();
+      }
+    }
+    return out;
+  }
+
   async function sbInsert(table, row) {
-    const { data, error } = await sb().from(table).insert(row).select().single();
+    const { data, error } = await sb().from(table).insert(normalizeTimestamps(row)).select().single();
     if (error) throw new Error(error.message);
     return data;
   }
 
   async function sbUpdate(table, matchCol, matchVal, patch) {
-    const { error } = await sb().from(table).update(patch).eq(matchCol, matchVal);
+    const { error } = await sb().from(table).update(normalizeTimestamps(patch)).eq(matchCol, matchVal);
     if (error) throw new Error(error.message);
   }
 
@@ -233,7 +253,7 @@
   }
 
   async function sbUpsert(table, row, conflictCol) {
-    const { error } = await sb().from(table).upsert(row, { onConflict: conflictCol });
+    const { error } = await sb().from(table).upsert(normalizeTimestamps(row), { onConflict: conflictCol });
     if (error) throw new Error(error.message);
   }
 
