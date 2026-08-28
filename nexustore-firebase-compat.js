@@ -448,6 +448,13 @@
       const uid = m[1];
       return { setVal: (v) => sbUpdate('User', 'id', uid, { avatarUrl: v }) };
     }
+    if ((m = path.match(/^users\/([^/]+)\/lastActive$/))) {
+      const uid = m[1];
+      // No error surfaced to the UI on failure on purpose — a missed
+      // heartbeat (e.g. one poll cycle overlapping a token refresh) isn't
+      // worth bothering the user about; it'll just try again on the next tick.
+      return { setVal: (v) => sbUpdate('User', 'id', uid, { lastActive: v }).catch(() => {}) };
+    }
     if ((m = path.match(/^users\/([^/]+)\/wishlist$/))) {
       const uid = m[1];
       return {
