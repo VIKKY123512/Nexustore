@@ -626,7 +626,13 @@
                 justify-content: space-between;
                 align-items: center;
                 box-shadow: var(--shadow-raised);
-                z-index: 1000;
+                /* Higher than .modal's 20000 — every modal (including Support)
+                   already reserves 100px of bottom padding on .modal-content
+                   for exactly this reason, but the nav was sitting BEHIND the
+                   modal's opaque full-screen background instead of on top of
+                   that reserved space, so it visually vanished the moment any
+                   modal opened. */
+                z-index: 20001;
             }
             @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
                 .bottom-nav { background: var(--surface); }
@@ -669,6 +675,7 @@
                 max-height: 100vh;
                 min-height: 100%;
                 overflow-y: auto;
+                overflow-x: hidden;
                 overscroll-behavior: none;
                 position: relative;
                 transform: none;
@@ -1483,7 +1490,7 @@
                     <button id="join-comm-btn" class="btn-sec" style="color: var(--success); border-color: var(--success); margin-bottom: 12px">
                         <i class="fas fa-users"></i> Join Community
                     </button>
-                    <button id="profile-action-btn" class="btn-main" style="background: var(--danger); box-shadow: none; margin-bottom: 4px;" onclick="handleAuthAction()">
+                    <button id="profile-action-btn" class="btn-main" style="background: var(--danger); box-shadow: none; margin-bottom: 4px;">
                         Logout
                     </button>
                 </div>
@@ -2499,7 +2506,14 @@
                 wishlistEl.innerText = (currentUser.wishlist || []).length;
                 downloadsEl.innerText = currentUser.dailyDownloads || 0;
             }
-            function handleAuthAction() {}
+            // handleAuthAction() used to be called from this button's inline
+            // onclick, but was an empty no-op stub — the button's real
+            // click behavior (Login vs Logout depending on auth state) is
+            // set dynamically in syncUserUI() below instead, which runs
+            // before any user could plausibly click it. Removed the dead
+            // inline handler and this stub to avoid the confusing
+            // appearance of two different, conflicting places controlling
+            // the same button.
             function navTo(page, skipHistory = false) {
                 document.querySelectorAll(".page-view").forEach((p) => p.classList.remove("active"));
                 document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
