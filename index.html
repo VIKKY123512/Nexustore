@@ -626,13 +626,14 @@
                 justify-content: space-between;
                 align-items: center;
                 box-shadow: var(--shadow-raised);
-                /* Higher than .modal's 20000 — every modal (including Support)
-                   already reserves 100px of bottom padding on .modal-content
-                   for exactly this reason, but the nav was sitting BEHIND the
-                   modal's opaque full-screen background instead of on top of
-                   that reserved space, so it visually vanished the moment any
-                   modal opened. */
-                z-index: 20001;
+                /* Below .modal's 20000 on purpose — a previous attempt to
+                   raise this above modals so it stayed visible on Profile/
+                   Support instead looked worse: the nav's translucent blur
+                   let whatever modal content sat behind it (e.g. the red
+                   Logout button) bleed through as a visible smear. Modals
+                   are meant to fully cover the nav; that's the correct,
+                   clean behavior, not a bug. */
+                z-index: 1000;
             }
             @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
                 .bottom-nav { background: var(--surface); }
@@ -1955,6 +1956,7 @@
                             }
 
                             attachOrdersListener(user.uid);
+                            startPresenceHeartbeat(user.uid);
 
                             if (msgQueryRef && msgListener) msgQueryRef.off("child_changed", msgListener);
                             msgQueryRef = db.ref("messages").orderByChild("user").equalTo(user.uid).limitToLast(1);
@@ -1975,6 +1977,7 @@
                         });
                 } else {
                     currentUser = null;
+                    stopPresenceHeartbeat();
                     if (ordersQueryRef && ordersListener) {
                         ordersQueryRef.off("value", ordersListener);
                         ordersListener = null;
@@ -2201,6 +2204,30 @@
                     // Server is down. Allow user to cancel safely.
                     const btn = document.querySelector("#live-verification-overlay .btn-sec");
                     if (btn) btn.style.display = "block";
+                }
+            }
+
+            // Presence/"last active" tracking — admin's Online Users count,
+            // Live Online Users list, and User Last Seen page all read
+            // User.lastActive, but nothing was ever writing to it (a
+            // leftover gap from Firebase's built-in onDisconnect() presence
+            // system, which has no direct Postgres equivalent). This is the
+            // simplest reasonable substitute: a heartbeat while the tab is
+            // open. Sends one immediately on login, then every 60s — the
+            // admin side treats anyone active within the last 5 minutes as
+            // "online", so 60s keeps a good safety margin without writing
+            // to the database too often.
+            let presenceIntervalId = null;
+            function startPresenceHeartbeat(uid) {
+                stopPresenceHeartbeat();
+                const beat = () => db.ref("users/" + uid + "/lastActive").set(Date.now());
+                beat();
+                presenceIntervalId = setInterval(beat, 60000);
+            }
+            function stopPresenceHeartbeat() {
+                if (presenceIntervalId) {
+                    clearInterval(presenceIntervalId);
+                    presenceIntervalId = null;
                 }
             }
 
