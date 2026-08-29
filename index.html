@@ -324,7 +324,7 @@
             }
             .search-input {
                 width: 100%;
-                padding: 16px 56px 16px 52px;
+                padding: 16px 20px 16px 52px;
                 border-radius: var(--radius-lg);
                 border: 1px solid var(--glass-border);
                 background: var(--surface-variant) !important;
@@ -343,15 +343,6 @@
                 position: absolute; left: 30px; top: 50%; transform: translateY(-50%);
                 color: var(--text-sub); font-size: 1.1rem; text-shadow: none;
                 pointer-events: none; z-index: 10;
-            }
-            #search-filter-btn {
-                position: absolute;
-                right: 6px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 38px;
-                height: 38px;
-                z-index: 15;
             }
             .section-title {
                 font-weight: 800;
@@ -1175,10 +1166,15 @@
                 <div class="search-wrap" id="search-bar-wrap">
                     <i class="fas fa-search"></i
                     ><input type="text" class="search-input" id="search-input" placeholder="Search products..." autocomplete="off" />
-                    <div class="icon-btn" id="search-filter-btn" onclick="toggleSearchFilters()">
-                        <i class="fas fa-sliders"></i>
-                    </div>
                 </div>
+                <button
+                    id="search-filter-btn"
+                    class="btn-sec"
+                    style="margin: -14px 0 14px; padding: 10px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                    onclick="toggleSearchFilters()"
+                >
+                    <i class="fas fa-sliders"></i> Filters
+                </button>
                 <div id="search-history-dropdown" style="display: none; margin: -12px 0 12px; background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; overflow: hidden;"></div>
                 <div id="search-filters-panel" style="display: none; flex-direction: column; gap: 10px; background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 14px; margin: -6px 0 14px;">
                     <div>
