@@ -321,9 +321,14 @@
                 border-radius: var(--radius-lg);
                 transition: 0.2s ease;
                 box-shadow: none;
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
             .search-input {
                 width: 100%;
+                flex: 1;
+                min-width: 0;
                 padding: 16px 20px 16px 52px;
                 border-radius: var(--radius-lg);
                 border: 1px solid var(--glass-border);
@@ -1165,7 +1170,42 @@
             <div class="container">
                 <div class="search-wrap" id="search-bar-wrap">
                     <i class="fas fa-search"></i
-                    ><input type="text" class="search-input" id="search-input" placeholder="Search products..." />
+                    ><input type="text" class="search-input" id="search-input" placeholder="Search products..." autocomplete="off" />
+                    <div class="icon-btn" id="search-filter-btn" style="width: 38px; height: 38px; flex-shrink: 0; margin-left: 6px;" onclick="toggleSearchFilters()">
+                        <i class="fas fa-sliders"></i>
+                    </div>
+                </div>
+                <div id="search-history-dropdown" style="display: none; margin: -12px 0 12px; background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; overflow: hidden;"></div>
+                <div id="search-filters-panel" style="display: none; background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 14px; margin: -6px 0 14px; display: flex; flex-direction: column; gap: 10px;">
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px;">Category</label>
+                        <select id="filter-category" class="inp" style="margin: 0;" onchange="runSearch()">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px;">Price</label>
+                            <select id="filter-price-type" class="inp" style="margin: 0;" onchange="runSearch()">
+                                <option value="">All</option>
+                                <option value="Free">Free</option>
+                                <option value="Paid">Paid</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px;">Sort By</label>
+                            <select id="filter-sort" class="inp" style="margin: 0;" onchange="runSearch()">
+                                <option value="relevance">Relevance</option>
+                                <option value="newest">Newest</option>
+                                <option value="popular">Most Downloaded</option>
+                                <option value="price-low">Price: Low to High</option>
+                                <option value="price-high">Price: High to Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn-sec" style="margin: 0; font-size: 0.85rem; padding: 8px;" onclick="clearSearchFilters()">
+                        <i class="fas fa-rotate-left"></i> Reset Filters
+                    </button>
                 </div>
                 <div id="home-page" class="page-view active">
                     <div class="section-title">CATEGORIES</div>
@@ -1416,9 +1456,9 @@
                     <!-- Stat pills -->
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0 20px;">
                         <div style="background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 4px; text-align: center;">
-                            <i class="fas fa-wallet" style="color: #f59e0b; font-size: 1.1rem;"></i>
+                            <i class="fas fa-receipt" style="color: #f59e0b; font-size: 1.1rem;"></i>
                             <div id="stat-wallet" style="font-size: 1rem; font-weight: 700; margin-top: 6px;">₹0</div>
-                            <div style="font-size: 0.65rem; color: var(--text-sub);">Wallet</div>
+                            <div style="font-size: 0.65rem; color: var(--text-sub);">Total Spent</div>
                         </div>
                         <div style="background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 4px; text-align: center;">
                             <i class="fas fa-bag-shopping" style="color: #3b82f6; font-size: 1.1rem;"></i>
@@ -1449,17 +1489,17 @@
 
                     <!-- Grouped settings list -->
                     <div style="background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 16px; margin: 20px 0 0; overflow: hidden;">
-                        <div class="profile-menu-row" onclick="openPurchases(); toggleModal('modal-profile', false);">
+                        <div class="profile-menu-row" onclick="closeProfileAndThen(openPurchases)">
                             <div class="profile-menu-icon" style="background: rgba(59,130,246,0.15); color: #3b82f6;"><i class="fas fa-bag-shopping"></i></div>
                             <div class="profile-menu-text"><strong>My Orders</strong><span>View your purchases &amp; downloads</span></div>
                             <i class="fas fa-chevron-right profile-menu-chevron"></i>
                         </div>
-                        <div class="profile-menu-row" onclick="openWishlist(); toggleModal('modal-profile', false);">
+                        <div class="profile-menu-row" onclick="closeProfileAndThen(openWishlist)">
                             <div class="profile-menu-icon" style="background: rgba(239,68,68,0.15); color: #ef4444;"><i class="fas fa-heart"></i></div>
                             <div class="profile-menu-text"><strong>Wishlist</strong><span>Products you've saved</span></div>
                             <i class="fas fa-chevron-right profile-menu-chevron"></i>
                         </div>
-                        <div class="profile-menu-row" onclick="toggleModal('modal-profile', false); openSupport();">
+                        <div class="profile-menu-row" onclick="closeProfileAndThen(openSupport)">
                             <div class="profile-menu-icon" style="background: rgba(16,185,129,0.15); color: #10b981;"><i class="fas fa-headset"></i></div>
                             <div class="profile-menu-text"><strong>Support Tickets</strong><span>Get help with an issue</span></div>
                             <i class="fas fa-chevron-right profile-menu-chevron"></i>
@@ -1804,6 +1844,22 @@
                 }, 3000);
             }
             let suppressHistoryPush = false;
+            function closeProfileAndThen(action) {
+                // toggleModal(id, false) calls history.back() to keep the
+                // hardware/browser Back button in sync with modals — but
+                // that fires an async popstate event whose fallback branch
+                // is navTo("home", true). Since Profile itself was just a
+                // plain modal push with no page state under it, going back
+                // from it landed on "no recognized state" and silently
+                // reset straight to Home — undoing whatever page (Orders,
+                // Wishlist, ...) had just been opened in the very same
+                // click. Suppressing history for just this close avoids
+                // that race entirely: no pop, no popstate, no override.
+                suppressHistoryPush = true;
+                toggleModal("modal-profile", false);
+                suppressHistoryPush = false;
+                action();
+            }
             function toggleModal(id, show) {
                 const el = document.getElementById(id);
                 if (show) {
@@ -2516,20 +2572,25 @@
             // since orders load asynchronously after login rather than being
             // part of the currentUser object itself.
             function updateProfileStats() {
-                const walletEl = document.getElementById("stat-wallet");
+                const spentEl = document.getElementById("stat-wallet");
                 const ordersEl = document.getElementById("stat-orders");
                 const wishlistEl = document.getElementById("stat-wishlist");
                 const downloadsEl = document.getElementById("stat-downloads");
-                if (!walletEl) return;
+                if (!spentEl) return;
                 if (!currentUser) {
-                    walletEl.innerText = "₹0";
+                    spentEl.innerText = "₹0";
                     ordersEl.innerText = "0";
                     wishlistEl.innerText = "0";
                     downloadsEl.innerText = "0";
                     return;
                 }
-                walletEl.innerText = "₹" + (currentUser.wallet || 0);
-                ordersEl.innerText = Object.keys(currentUserOrders || {}).length;
+                // Replaces a wallet/credit balance that was never actually
+                // used anywhere in the app (always showed ₹0) with real,
+                // useful data: total spent across every completed order.
+                const orders = Object.values(currentUserOrders || {});
+                const totalSpent = orders.filter((o) => o.status === "verified").reduce((sum, o) => sum + (o.amount || 0), 0);
+                spentEl.innerText = "₹" + totalSpent;
+                ordersEl.innerText = orders.length;
                 wishlistEl.innerText = (currentUser.wishlist || []).length;
                 downloadsEl.innerText = currentUser.dailyDownloads || 0;
             }
@@ -2599,6 +2660,7 @@
             db.ref("categories").on("value", (s) => {
                 globalCats = s.val() || {};
                 renderCategories(null);
+                populateSearchCategoryFilter();
             });
             db.ref("apps").on("value", (s) => {
                 // BUGFIX: this used to only run inside `if (s.val())`, so when the admin
@@ -2681,32 +2743,136 @@
                     restoreScroll("category-page");
                 }, 50);
             }
+            // ---------------- Search: filters, category scoping, history ----------------
+            const SEARCH_HISTORY_KEY = "nexustore_search_history";
+            const SEARCH_HISTORY_MAX = 10;
+
+            function getSearchHistory() {
+                try {
+                    return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || "[]");
+                } catch {
+                    return [];
+                }
+            }
+            function addToSearchHistory(term) {
+                term = term.trim();
+                if (!term) return;
+                let hist = getSearchHistory().filter((t) => t.toLowerCase() !== term.toLowerCase());
+                hist.unshift(term);
+                hist = hist.slice(0, SEARCH_HISTORY_MAX);
+                localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(hist));
+            }
+            function removeFromSearchHistory(term) {
+                const hist = getSearchHistory().filter((t) => t !== term);
+                localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(hist));
+                renderSearchHistory();
+            }
+            function clearSearchHistory() {
+                localStorage.removeItem(SEARCH_HISTORY_KEY);
+                renderSearchHistory();
+            }
+            function renderSearchHistory() {
+                const dropdown = document.getElementById("search-history-dropdown");
+                const hist = getSearchHistory();
+                if (!hist.length) {
+                    dropdown.style.display = "none";
+                    dropdown.innerHTML = "";
+                    return;
+                }
+                dropdown.innerHTML =
+                    `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--glass-border);">
+                        <span style="font-size:0.75rem; color:var(--text-sub); font-weight:600;">RECENT SEARCHES</span>
+                        <span style="font-size:0.75rem; color:var(--danger); cursor:pointer;" onclick="clearSearchHistory()">Clear All</span>
+                    </div>` +
+                    hist
+                        .map(
+                            (term) => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; cursor:pointer;" onclick="document.getElementById('search-input').value='${term.replace(/'/g, "\\'")}'; runSearch(); document.getElementById('search-history-dropdown').style.display='none';">
+                            <span style="font-size:0.85rem; display:flex; align-items:center; gap:8px;"><i class="fas fa-clock-rotate-left" style="color:var(--text-sub); font-size:0.75rem;"></i>${escapeHtml(term)}</span>
+                            <i class="fas fa-times" style="color:var(--text-sub); padding:4px;" onclick="event.stopPropagation(); removeFromSearchHistory('${term.replace(/'/g, "\\'")}')"></i>
+                        </div>`
+                        )
+                        .join("");
+                dropdown.style.display = "block";
+            }
+            function populateSearchCategoryFilter() {
+                const sel = document.getElementById("filter-category");
+                const current = sel.value;
+                sel.innerHTML = '<option value="">All Categories</option>';
+                Object.values(globalCats)
+                    .sort((a, b) => (a.position || 999) - (b.position || 999))
+                    .forEach((c) => {
+                        sel.innerHTML += `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`;
+                    });
+                sel.value = current;
+            }
+            function toggleSearchFilters() {
+                const panel = document.getElementById("search-filters-panel");
+                panel.style.display = panel.style.display === "none" ? "flex" : "none";
+                document.getElementById("search-history-dropdown").style.display = "none";
+            }
+            function clearSearchFilters() {
+                document.getElementById("filter-category").value = "";
+                document.getElementById("filter-price-type").value = "";
+                document.getElementById("filter-sort").value = "relevance";
+                runSearch();
+            }
             let searchTimeout;
-            document.getElementById("search-input").addEventListener("input", (e) => {
+            function runSearch() {
+                const rawVal = document.getElementById("search-input").value;
+                const val = rawVal.toLowerCase().trim();
+                const category = document.getElementById("filter-category").value;
+                const priceType = document.getElementById("filter-price-type").value;
+                const sortBy = document.getElementById("filter-sort").value;
+                const resPage = document.getElementById("search-results");
+                const home = document.getElementById("home-page");
+                const grid = document.getElementById("search-grid");
+                const hasQuery = val.length > 0;
+                const hasFilters = category || priceType;
+
+                if (!hasQuery && !hasFilters) {
+                    resPage.classList.remove("active");
+                    home.classList.add("active");
+                    restoreScroll("home-page");
+                    return;
+                }
+                home.classList.remove("active");
+                resPage.classList.add("active");
+
+                let hits = allApps.filter((a) => {
+                    if (val && !a.title.toLowerCase().includes(val)) return false;
+                    if (category && a.category !== category) return false;
+                    if (priceType && a.priceType !== priceType) return false;
+                    return true;
+                });
+
+                if (sortBy === "newest") hits = [...hits].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                else if (sortBy === "popular") hits = [...hits].sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+                else if (sortBy === "price-low") hits = [...hits].sort((a, b) => (a.price || 0) - (b.price || 0));
+                else if (sortBy === "price-high") hits = [...hits].sort((a, b) => (b.price || 0) - (a.price || 0));
+
+                grid.innerHTML = hits
+                    .map(
+                        (app) =>
+                            `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`
+                    )
+                    .join("");
+                if (hits.length === 0) grid.innerHTML = '<p style="text-align:center; width:100%;">No results</p>';
+
+                if (hasQuery) addToSearchHistory(rawVal.trim());
+                document.getElementById("search-history-dropdown").style.display = "none";
+            }
+            document.getElementById("search-input").addEventListener("input", () => {
                 clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    const val = e.target.value.toLowerCase();
-                    const resPage = document.getElementById("search-results");
-                    const home = document.getElementById("home-page");
-                    const grid = document.getElementById("search-grid");
-                    if (val.length > 0) {
-                        home.classList.remove("active");
-                        resPage.classList.add("active");
-                        grid.innerHTML = "";
-                        const hits = allApps.filter((a) => a.title.toLowerCase().includes(val));
-                        let out = [];
-                        hits.forEach((app) => {
-                            out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
-                        });
-                        grid.innerHTML = out.join("");
-                        if (hits.length === 0)
-                            grid.innerHTML = '<p style="text-align:center; width:100%;">No results</p>';
-                    } else {
-                        resPage.classList.remove("active");
-                        home.classList.add("active");
-                        restoreScroll("home-page");
-                    }
-                }, 300);
+                searchTimeout = setTimeout(runSearch, 300);
+            });
+            document.getElementById("search-input").addEventListener("focus", () => {
+                if (!document.getElementById("search-input").value.trim()) renderSearchHistory();
+            });
+            document.addEventListener("click", (e) => {
+                if (!document.getElementById("search-bar-wrap").contains(e.target) && !document.getElementById("search-history-dropdown").contains(e.target)) {
+                    document.getElementById("search-history-dropdown").style.display = "none";
+                }
             });
             // ⚡ OPTIONAL FEATURES: Sales Boosters
             function startCountdown() {
