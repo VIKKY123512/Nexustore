@@ -1171,12 +1171,12 @@
                 <div class="search-wrap" id="search-bar-wrap">
                     <i class="fas fa-search"></i
                     ><input type="text" class="search-input" id="search-input" placeholder="Search products..." autocomplete="off" />
-                    <div class="icon-btn" id="search-filter-btn" style="width: 38px; height: 38px; flex-shrink: 0; margin-left: 6px;" onclick="toggleSearchFilters()">
+                    <div class="icon-btn" id="search-filter-btn" style="flex-shrink: 0; margin-left: 6px;" onclick="toggleSearchFilters()">
                         <i class="fas fa-sliders"></i>
                     </div>
                 </div>
                 <div id="search-history-dropdown" style="display: none; margin: -12px 0 12px; background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; overflow: hidden;"></div>
-                <div id="search-filters-panel" style="display: none; background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 14px; margin: -6px 0 14px; display: flex; flex-direction: column; gap: 10px;">
+                <div id="search-filters-panel" style="display: none; flex-direction: column; gap: 10px; background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 14px; margin: -6px 0 14px;">
                     <div>
                         <label style="font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px;">Category</label>
                         <select id="filter-category" class="inp" style="margin: 0;" onchange="runSearch()">
@@ -1195,11 +1195,11 @@
                         <div style="flex: 1;">
                             <label style="font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px;">Sort By</label>
                             <select id="filter-sort" class="inp" style="margin: 0;" onchange="runSearch()">
-                                <option value="relevance">Relevance</option>
+                                <option value="price-high">Price: High to Low</option>
+                                <option value="price-low">Price: Low to High</option>
                                 <option value="newest">Newest</option>
                                 <option value="popular">Most Downloaded</option>
-                                <option value="price-low">Price: Low to High</option>
-                                <option value="price-high">Price: High to Low</option>
+                                <option value="relevance">Relevance</option>
                             </select>
                         </div>
                     </div>
@@ -2656,6 +2656,9 @@
             function goHome() {
                 navTo("home");
                 restoreScroll("home-page");
+                document.getElementById("search-input").value = "";
+                document.getElementById("search-filters-panel").style.display = "none";
+                document.getElementById("search-history-dropdown").style.display = "none";
             }
             db.ref("categories").on("value", (s) => {
                 globalCats = s.val() || {};
@@ -2814,7 +2817,7 @@
             function clearSearchFilters() {
                 document.getElementById("filter-category").value = "";
                 document.getElementById("filter-price-type").value = "";
-                document.getElementById("filter-sort").value = "relevance";
+                document.getElementById("filter-sort").value = "price-high";
                 runSearch();
             }
             let searchTimeout;
@@ -2834,6 +2837,8 @@
                     resPage.classList.remove("active");
                     home.classList.add("active");
                     restoreScroll("home-page");
+                    document.getElementById("search-filters-panel").style.display = "none";
+                    document.getElementById("search-history-dropdown").style.display = "none";
                     return;
                 }
                 home.classList.remove("active");
