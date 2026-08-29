@@ -229,7 +229,7 @@
     if (!obj || typeof obj !== 'object') return obj;
     const out = { ...obj };
     for (const key of Object.keys(out)) {
-      if (/(At|Time|Date)$/.test(key) && typeof out[key] === 'number') {
+      if (/(At|Time|Date|Active)$/.test(key) && typeof out[key] === 'number') {
         out[key] = new Date(out[key]).toISOString();
       }
     }
@@ -450,10 +450,17 @@
     }
     if ((m = path.match(/^users\/([^/]+)\/lastActive$/))) {
       const uid = m[1];
-      // No error surfaced to the UI on failure on purpose — a missed
-      // heartbeat (e.g. one poll cycle overlapping a token refresh) isn't
-      // worth bothering the user about; it'll just try again on the next tick.
-      return { setVal: (v) => sbUpdate('User', 'id', uid, { lastActive: v }).catch(() => {}) };
+      // No .catch(() => {}) here anymore — that swallowed the exact bug
+      // above for as long as it existed (a genuine write failure looked
+      // identical to a quiet, working heartbeat). Log failures loudly to
+      // the console instead so a real problem is at least visible there,
+      // without bothering the user with a banner over a missed heartbeat.
+      return {
+        setVal: (v) =>
+          sbUpdate('User', 'id', uid, { lastActive: v }).catch((e) =>
+            console.error('[nexustore-compat] heartbeat failed:', e)
+          ),
+      };
     }
     if ((m = path.match(/^users\/([^/]+)\/wishlist$/))) {
       const uid = m[1];
