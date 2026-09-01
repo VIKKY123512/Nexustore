@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <title>Nexustore - Premium Digital Products & Modded Apps</title>
         <meta name="description" content="NexusStore - Premium Digital Products & Tools. Instantly download the best apps, verified and secure." />
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://*; img-src 'self' data: blob: https://*;" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://qwwcqtluvhcvotuzmrov.supabase.co wss://qwwcqtluvhcvotuzmrov.supabase.co https://nexustore-api.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
         <meta http-equiv="X-Content-Type-Options" content="nosniff" />
         
         <!-- EXTREME FAST LOADING PRECONNECTS -->
@@ -1614,7 +1614,7 @@
                         <i class="fas fa-paperclip"></i> Attach Screenshot (Optional)
                     </button>
 
-                    <button class="btn-main" onclick="submitTicket()">
+                    <button class="btn-main" id="ticket-submit-btn" onclick="submitTicket()">
                         <i class="fas fa-paper-plane"></i> Submit Ticket
                     </button>
                 </div>
@@ -1819,6 +1819,20 @@
                     .replace(/>/g, "&gt;")
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&#039;");
+            }
+            // Product image URLs, moreLinks, and the tutorial link are all
+            // free-text fields set from the admin panel — rejects
+            // javascript:/data:text\/html/file: etc. before use in an <img
+            // src>, an href, or window.open(), so a mistyped or malicious
+            // link can't run script instead of just failing to open/load.
+            // data:image/* stays allowed since real product logos use it.
+            function safeUrl(url, { allowDataImage = false } = {}) {
+                if (!url || typeof url !== "string") return null;
+                const trimmed = url.trim();
+                if (/^https?:\/\//i.test(trimmed)) return trimmed;
+                if (allowDataImage && /^data:image\//i.test(trimmed)) return trimmed;
+                if (!allowDataImage && /^\//.test(trimmed)) return trimmed; // relative path, e.g. a same-origin asset
+                return null;
             }
             // Backward-compat for messages sent before this session's fix, which
             // stored a raw '<img src="data:..." onclick="...">' HTML STRING as the
@@ -2811,9 +2825,11 @@
                 runSearch();
             }
             let searchTimeout;
-            function runSearch() {
+            let searchAbortController = null;
+            let searchGeneration = 0;
+            async function runSearch() {
                 const rawVal = document.getElementById("search-input").value;
-                const val = rawVal.toLowerCase().trim();
+                const val = rawVal.trim();
                 const category = document.getElementById("filter-category").value;
                 const priceType = document.getElementById("filter-price-type").value;
                 const sortBy = document.getElementById("filter-sort").value;
@@ -2824,6 +2840,12 @@
                 const hasFilters = category || priceType;
 
                 if (!hasQuery && !hasFilters) {
+                    // Dropping any still-in-flight search here too — otherwise
+                    // clearing the box while a slow search is pending could let
+                    // that stale response repopulate the grid after we've
+                    // already navigated back to the home page.
+                    if (searchAbortController) searchAbortController.abort();
+                    searchGeneration++;
                     resPage.classList.remove("active");
                     home.classList.add("active");
                     restoreScroll("home-page");
@@ -2834,17 +2856,34 @@
                 home.classList.remove("active");
                 resPage.classList.add("active");
 
-                let hits = allApps.filter((a) => {
-                    if (val && !a.title.toLowerCase().includes(val)) return false;
-                    if (category && a.category !== category) return false;
-                    if (priceType && a.priceType !== priceType) return false;
-                    return true;
-                });
+                // Runs the match/filter/sort in Postgres instead of filtering the
+                // full in-memory allApps array — see database().searchProducts in
+                // nexustore-firebase-compat.js. Abort the previous request AND
+                // bump a generation counter: the abort alone isn't enough because
+                // a request that already reached the server before being aborted
+                // can still resolve with a (now stale) result in some browsers.
+                if (searchAbortController) searchAbortController.abort();
+                searchAbortController = new AbortController();
+                const myGeneration = ++searchGeneration;
 
-                if (sortBy === "newest") hits = [...hits].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                else if (sortBy === "popular") hits = [...hits].sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
-                else if (sortBy === "price-low") hits = [...hits].sort((a, b) => (a.price || 0) - (b.price || 0));
-                else if (sortBy === "price-high") hits = [...hits].sort((a, b) => (b.price || 0) - (a.price || 0));
+                grid.innerHTML = '<p style="text-align:center; width:100%; opacity:0.7;">Searching…</p>';
+
+                let hits = [];
+                try {
+                    hits = await db.searchProducts({
+                        query: val,
+                        category,
+                        priceType,
+                        sortBy,
+                        signal: searchAbortController.signal,
+                    });
+                } catch (e) {
+                    if (e.name === "AbortError" || myGeneration !== searchGeneration) return; // superseded — a newer search already owns the grid
+                    console.error("[search] failed:", e);
+                    grid.innerHTML = '<p style="text-align:center; width:100%;">Couldn\'t load search results — check your connection and try again.</p>';
+                    return;
+                }
+                if (myGeneration !== searchGeneration) return; // a newer search started while this one was in flight
 
                 renderProductGridProgressive(grid, hits, '<p style="text-align:center; width:100%;">No results</p>');
 
@@ -2888,7 +2927,7 @@
                 const alreadyOwns = order && order.status === "verified";
                 const isPending = order && order.status === "pending";
 
-                document.getElementById("det-img").src = app.logo;
+                document.getElementById("det-img").src = safeUrl(app.logo, { allowDataImage: true }) || "favicon.png";
                 document.getElementById("det-title").innerText = app.title;
                 document.getElementById("det-cat").innerText = (app.category || "").toUpperCase();
                 
@@ -2898,7 +2937,7 @@
                     const lines = app.description.split("\n");
                     let html = '<ul class="desc-list">';
                     lines.forEach((l) => {
-                        if (l.trim()) html += `<li><i class="fas fa-check-circle"></i> ${l}</li>`;
+                        if (l.trim()) html += `<li><i class="fas fa-check-circle"></i> ${escapeHtml(l)}</li>`;
                     });
                     html += "</ul>";
                     descBox.innerHTML = html;
@@ -2914,7 +2953,8 @@
                         const parts = line.split("|");
                         if (parts.length === 2) {
                             const name = parts[0].trim();
-                            const url = parts[1].trim();
+                            const url = safeUrl(parts[1].trim());
+                            if (!url) return; // rejected scheme (javascript:/data:/file:/etc.) — skip rather than render a dead/dangerous button
                             const btn = document.createElement("button");
                             btn.className = "btn-sec";
                             btn.innerText = name;
@@ -2927,11 +2967,12 @@
                 }
                 
                 const extBtn = document.getElementById("btn-extra");
-                if (app.extraLinkUrl) {
+                const safeExtraLink = safeUrl(app.extraLinkUrl);
+                if (safeExtraLink) {
                     extBtn.style.display = "block";
                     extBtn.innerText = app.extraLinkName || "Watch Tutorial";
                     extBtn.onclick = () => {
-                        window.open(app.extraLinkUrl, "_blank");
+                        window.open(safeExtraLink, "_blank");
                     };
                 } else {
                     extBtn.style.display = "none";
@@ -3179,7 +3220,8 @@
                     .catch((err) => showToast(err.message || "Couldn't remove photo", "error"));
             }
             // ---------------- Support Tickets ----------------
-            let ticketImageBase64 = null;
+            let ticketImageBlob = null;
+            let ticketImagePreviewUrl = null;
             let myTicketsUnsub = null; // .off() handle so switching tabs repeatedly doesn't stack up listeners
 
             function openSupport() {
@@ -3225,7 +3267,10 @@
                         const catTag = t.category
                             ? `<span style="color:var(--text-sub); font-size:0.75rem;">${escapeHtml(t.category)}</span>`
                             : "";
-                        const imgHtml = imgSrc && imgSrc.startsWith("data:image/")
+                        // imageData is now a Storage URL for new tickets (see
+                        // uploadTicketImage) — older rows can still be a real
+                        // data: URL, so both need to render.
+                        const imgHtml = imgSrc && (imgSrc.startsWith("data:image/") || imgSrc.startsWith("http"))
                             ? `<img src="${imgSrc}" style="width:100%; border-radius:10px; margin-top:8px; cursor:pointer;" onclick="window.open(this.src)">`
                             : "";
                         const replyHtml = t.reply
@@ -3263,9 +3308,16 @@
                         canvas.width = MAX_WIDTH;
                         canvas.height = img.height * scaleSize;
                         canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-                        ticketImageBase64 = canvas.toDataURL("image/jpeg", 0.6);
-                        document.getElementById("ticket-image-preview-img").src = ticketImageBase64;
-                        document.getElementById("ticket-image-preview").style.display = "block";
+                        // Kept as a blob for upload (see uploadTicketImage) instead
+                        // of a base64 data URL — the data URL only ever exists
+                        // locally now, as a throwaway object-URL for the preview.
+                        canvas.toBlob((blob) => {
+                            ticketImageBlob = blob;
+                            if (ticketImagePreviewUrl) URL.revokeObjectURL(ticketImagePreviewUrl);
+                            ticketImagePreviewUrl = URL.createObjectURL(blob);
+                            document.getElementById("ticket-image-preview-img").src = ticketImagePreviewUrl;
+                            document.getElementById("ticket-image-preview").style.display = "block";
+                        }, "image/jpeg", 0.6);
                     };
                     img.src = e.target.result;
                 };
@@ -3273,10 +3325,12 @@
                 event.target.value = "";
             }
             function clearTicketImage() {
-                ticketImageBase64 = null;
+                ticketImageBlob = null;
+                if (ticketImagePreviewUrl) URL.revokeObjectURL(ticketImagePreviewUrl);
+                ticketImagePreviewUrl = null;
                 document.getElementById("ticket-image-preview").style.display = "none";
             }
-            function submitTicket() {
+            async function submitTicket() {
                 const category = document.getElementById("ticket-category").value;
                 const subject = document.getElementById("ticket-subject").value.trim();
                 const body = document.getElementById("ticket-body").value.trim();
@@ -3284,25 +3338,36 @@
                     showToast("Please fill in the subject and description", "error");
                     return;
                 }
-                db.ref("messages")
-                    .push({
+                const submitBtn = document.getElementById("ticket-submit-btn");
+                const originalBtnHtml = submitBtn ? submitBtn.innerHTML : null;
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = "Submitting..."; }
+                try {
+                    // Uploaded to Storage first (see uploadTicketImage in the
+                    // compat shim) so the message row only ever stores a URL,
+                    // never the image bytes themselves.
+                    const imageUrl = ticketImageBlob
+                        ? await firebase.storage.uploadTicketImage(currentUser.id, ticketImageBlob)
+                        : null;
+                    await db.ref("messages").push({
                         user: currentUser.id,
                         userName: currentUser.name,
                         email: currentUser.email,
                         title: subject,
                         body: body,
                         category: category,
-                        imageData: ticketImageBase64,
+                        imageData: imageUrl,
                         timestamp: Date.now(),
-                    })
-                    .then(() => {
-                        showToast("Ticket Submitted", "success");
-                        document.getElementById("ticket-subject").value = "";
-                        document.getElementById("ticket-body").value = "";
-                        clearTicketImage();
-                        switchTicketTab("mine");
-                    })
-                    .catch((err) => showToast(err.message || "Couldn't submit ticket", "error"));
+                    });
+                    showToast("Ticket Submitted", "success");
+                    document.getElementById("ticket-subject").value = "";
+                    document.getElementById("ticket-body").value = "";
+                    clearTicketImage();
+                    switchTicketTab("mine");
+                } catch (err) {
+                    showToast(err.message || "Couldn't submit ticket", "error");
+                } finally {
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnHtml; }
+                }
             }
 
             // (Decorative floating-bubble setInterval removed — it ran every 350ms
@@ -3470,7 +3535,8 @@
                 return `<button class="quick-buy-btn" onclick="event.stopPropagation(); spawnRipple(event); quickBuy('${app.id}')"><i class="fas fa-bolt"></i>Buy</button>`;
             }
             function buildProductCardHtml(app) {
-                return `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+                const safeLogo = safeUrl(app.logo, { allowDataImage: true }) || "favicon.png";
+                return `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${safeLogo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${escapeHtml(app.title)}</h3>${getPriceHtml(app)}</div>`;
             }
             // ---------------- Progressive grid rendering ----------------
             // Large result sets (a big category, a broad search) used to build
