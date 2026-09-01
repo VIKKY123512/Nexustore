@@ -2730,19 +2730,9 @@
                     history.pushState({ page: "category", catId: id, catName: name }, "", "?category=" + encodeURIComponent(id));
                 }
                 setTimeout(() => {
-                    grid.innerHTML = "";
                     // Categories are flat now — always render this category's products directly.
-                    {
-                        const apps = allApps.filter((a) => (a.category || "").toLowerCase() === name.toLowerCase());
-                        let out = [];
-                        apps.forEach((app) => {
-                            out.push(` <div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
-                        });
-                        grid.innerHTML = out.join("");
-                        if (apps.length === 0)
-                            grid.innerHTML =
-                                '<p style="grid-column:1/-1; text-align:center; color:#666;">No apps found.</p>';
-                    }
+                    const apps = allApps.filter((a) => (a.category || "").toLowerCase() === name.toLowerCase());
+                    renderProductGridProgressive(grid, apps, '<p style="grid-column:1/-1; text-align:center; color:#666;">No apps found.</p>');
                     restoreScroll("category-page");
                 }, 50);
             }
@@ -2856,13 +2846,7 @@
                 else if (sortBy === "price-low") hits = [...hits].sort((a, b) => (a.price || 0) - (b.price || 0));
                 else if (sortBy === "price-high") hits = [...hits].sort((a, b) => (b.price || 0) - (a.price || 0));
 
-                grid.innerHTML = hits
-                    .map(
-                        (app) =>
-                            `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`
-                    )
-                    .join("");
-                if (hits.length === 0) grid.innerHTML = '<p style="text-align:center; width:100%;">No results</p>';
+                renderProductGridProgressive(grid, hits, '<p style="text-align:center; width:100%;">No results</p>');
 
                 if (hasQuery) addToSearchHistory(rawVal.trim());
                 document.getElementById("search-history-dropdown").style.display = "none";
@@ -3080,17 +3064,8 @@
                 document.getElementById("wishlist-page").classList.add("active");
                 restoreScroll("wishlist-page");
                 const grid = document.getElementById("wishlist-grid");
-                grid.innerHTML = "";
-                if (currentUser && currentUser.wishlist) {
-                    const list = allApps.filter((a) => currentUser.wishlist.includes(a.id));
-                    let out = [];
-                    list.forEach((app) => {
-                        out.push(`<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="wish-icon active" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`);
-                    });
-                    grid.innerHTML = out.join("");
-                } else {
-                    grid.innerHTML = '<p style="text-align:center; color:var(--text-sub);">Empty</p>';
-                }
+                const list = currentUser && currentUser.wishlist ? allApps.filter((a) => currentUser.wishlist.includes(a.id)) : [];
+                renderProductGridProgressive(grid, list, '<p style="text-align:center; color:var(--text-sub);">Empty</p>');
             }
             function toggleWish(id, btn) {
                 event.stopPropagation();
@@ -3493,6 +3468,77 @@
                 // they route through openDetail() like everything else.
                 if (!(app.price && app.price > 0)) return "";
                 return `<button class="quick-buy-btn" onclick="event.stopPropagation(); spawnRipple(event); quickBuy('${app.id}')"><i class="fas fa-bolt"></i>Buy</button>`;
+            }
+            function buildProductCardHtml(app) {
+                return `<div class="card" id="card-${app.id}" onclick="openDetail('${app.id}')"><div class="prod-img-wrap">${getCardBadgesHtml(app)}<div class="${wishIconClass(app.id)}" onclick="event.stopPropagation(); toggleWish('${app.id}', this)"><i class="fas fa-heart"></i></div><div class="skeleton-layer"></div><img src="${app.logo}" class="skel-img" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')">${getCardOverlayHtml(app)}</div><h3>${app.title}</h3>${getPriceHtml(app)}</div>`;
+            }
+            // ---------------- Progressive grid rendering ----------------
+            // Large result sets (a big category, a broad search) used to build
+            // the ENTIRE list as one huge innerHTML string in a single
+            // synchronous block — fine for a few dozen products, a real
+            // multi-hundred-millisecond main-thread freeze at 1000+, since the
+            // browser has to parse and construct every card's DOM subtree
+            // before it can paint anything at all. This renders one batch
+            // immediately (feels instant), then appends more batches as an
+            // IntersectionObserver sentinel approaches the viewport — so the
+            // DOM only ever contains what's actually been scrolled near,
+            // regardless of how many products matched. Combined with `.card`'s
+            // existing content-visibility:auto (which skips layout/paint for
+            // off-screen cards), this keeps both the initial render AND
+            // ongoing scroll cheap at any catalog size.
+            const GRID_BATCH_SIZE = 24;
+            let gridRenderGeneration = 0;
+            const gridObservers = new Map(); // container id -> its active IntersectionObserver
+
+            function renderProductGridProgressive(container, apps, emptyMessage) {
+                // Stop any in-flight progressive load already running on this
+                // container — otherwise switching category/search quickly
+                // could leave a stale observer alive, appending old results
+                // into a grid that's since moved on to a different query.
+                const existingObserver = gridObservers.get(container.id);
+                if (existingObserver) existingObserver.disconnect();
+                gridObservers.delete(container.id);
+
+                const myGeneration = ++gridRenderGeneration;
+                container.innerHTML = "";
+
+                if (!apps.length) {
+                    container.innerHTML = emptyMessage || '<p style="grid-column:1/-1; text-align:center; color:#666;">No results.</p>';
+                    return;
+                }
+
+                let renderedCount = 0;
+                const sentinel = document.createElement("div");
+                sentinel.setAttribute("aria-hidden", "true");
+                sentinel.style.cssText = "grid-column: 1/-1; height: 1px;";
+
+                function renderNextBatch() {
+                    if (myGeneration !== gridRenderGeneration) return; // superseded by a newer render — stop silently, don't touch the (now different) grid
+                    const batch = apps.slice(renderedCount, renderedCount + GRID_BATCH_SIZE);
+                    if (!batch.length) {
+                        sentinel.remove();
+                        observer.disconnect();
+                        gridObservers.delete(container.id);
+                        return;
+                    }
+                    sentinel.insertAdjacentHTML("beforebegin", batch.map(buildProductCardHtml).join(""));
+                    renderedCount += batch.length;
+                }
+
+                container.appendChild(sentinel);
+                renderNextBatch(); // first batch renders synchronously — no spinner needed, feels instant
+
+                // Large rootMargin starts loading the next batch well before the
+                // sentinel is actually on-screen, so fast scrolling never
+                // outruns rendering and produces a visible gap.
+                const observer = new IntersectionObserver(
+                    (entries) => {
+                        if (entries[0].isIntersecting) renderNextBatch();
+                    },
+                    { rootMargin: "800px" }
+                );
+                observer.observe(sentinel);
+                gridObservers.set(container.id, observer);
             }
             function quickBuy(id) {
                 const app = allApps.find(a => a.id === id);
