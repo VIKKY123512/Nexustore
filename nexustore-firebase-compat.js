@@ -200,6 +200,36 @@
     }
   }
 
+  const TICKET_IMAGE_MAX_BYTES = 2 * 1024 * 1024; // matches the bucket's file_size_limit in migration-008
+  const TICKET_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  // Support-ticket screenshots used to be embedded directly as a base64
+  // data URL in Message.imageData — every row carrying its own image bytes
+  // inline, downloaded again on every single messages fetch/poll for
+  // everyone who can see it (the user themselves, or admin's ticket list),
+  // and bloating the table itself. This uploads to the "ticket-attachments"
+  // Storage bucket instead (same pattern as uploadAvatarFile above) and
+  // returns a public URL — Message.imageData keeps its existing column
+  // name/shape (still just a string used directly as an <img src>), so
+  // nothing reading it needs to change, and older rows with a real
+  // data-URL still display exactly as before.
+  async function uploadTicketImage(uid, blob) {
+    if (!blob || !TICKET_IMAGE_MIME_TYPES.includes(blob.type)) {
+      throw new Error('Please choose a JPG, PNG, or WEBP image.');
+    }
+    if (blob.size > TICKET_IMAGE_MAX_BYTES) {
+      throw new Error('Image is too large — please choose one under 2MB.');
+    }
+    const path = `${uid}/${Date.now()}-${crypto.randomUUID()}.jpg`;
+    const { error: upErr } = await sb().storage.from('ticket-attachments').upload(path, blob, {
+      cacheControl: '3600',
+      contentType: blob.type,
+    });
+    if (upErr) throw new Error(upErr.message);
+    const { data } = sb().storage.from('ticket-attachments').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   async function sbSelect(table, build, columns) {
     let q = sb().from(table).select(columns || '*');
     if (build) q = build(q);
@@ -291,6 +321,113 @@
       if (item && item.id !== undefined) out[item.id] = item;
     }
     return out;
+  }
+
+  // ---- Live (realtime-backed) cache for large, frequently-watched
+  // collections (apps/categories) --------------------------------------
+  // Previously every `db.ref("apps").on("value", ...)` / `db.ref("categories")`
+  // subscriber ran a full `SELECT * FROM Product` (or Category) every 3
+  // seconds, forever, per open tab — fine at a few dozen rows, but at
+  // 1,000+ products that's a full-catalog download every 3s per visitor,
+  // scaling with (catalog size x concurrent tabs) regardless of what's
+  // actually on screen or how often it really changes.
+  //
+  // This replaces the poll with a Supabase Realtime subscription: one
+  // initial fetch, then only the row that actually changed comes over the
+  // wire on insert/update/delete. A slow safety-net resync (60s once
+  // realtime confirms it's connected, 8s while it isn't) guards against a
+  // missed event without going back to polling the whole table every 3s.
+  //
+  // The cache/channel/safety-net are shared per path (module-level), not
+  // per RefShim instance, so opening several `db.ref("apps")` listeners
+  // (main list + any admin view) doesn't open several realtime channels
+  // or run several independent resyncs.
+  const LIVE_TABLE_CONFIG = {
+    apps: { table: 'Product', orderField: 'position' },
+    categories: { table: 'Category', orderField: 'position' },
+  };
+  const liveTables = new Map(); // path -> live table state
+
+  function getLiveTable(path) {
+    if (liveTables.has(path)) return liveTables.get(path);
+
+    const { table, orderField } = LIVE_TABLE_CONFIG[path];
+    const state = {
+      rows: new Map(), // id -> row
+      ready: false,
+      listeners: new Set(), // Set<cb>, the 'value' event callbacks
+      safetyIntervalId: null,
+    };
+
+    function currentSnapshotVal() {
+      const out = {};
+      state.rows.forEach((row, id) => { out[id] = row; });
+      return out;
+    }
+
+    function notify() {
+      const val = currentSnapshotVal();
+      state.listeners.forEach((cb) => {
+        try { cb(makeSnapshot(path, val)); } catch (e) {
+          console.error('[nexustore-compat] live listener error for', path, e);
+        }
+      });
+    }
+
+    async function resync() {
+      try {
+        const fresh = await sbSelect(table, (q) => q.order(orderField));
+        state.rows.clear();
+        fresh.forEach((row) => state.rows.set(row.id, row));
+        state.ready = true;
+        if (bannerShownForPath.has(path)) {
+          bannerShownForPath.delete(path);
+          clearBanner(path);
+        }
+        notify();
+      } catch (e) {
+        console.error('[nexustore-compat] live resync failed for', path, e);
+        if (!bannerShownForPath.has(path)) {
+          bannerShownForPath.set(path, true);
+          showFatalBanner(`Couldn't load "${path}" from ${describeFailedSource(path)}: ${e.message}`, path);
+        }
+      }
+    }
+    retryHandlers.set(path, resync); // so the error banner's "Retry now" button works here too
+
+    function applyChange(payload) {
+      if (payload.eventType === 'DELETE') {
+        const oldId = payload.old && payload.old.id;
+        if (oldId != null) state.rows.delete(oldId);
+      } else if (payload.new && payload.new.id != null) {
+        state.rows.set(payload.new.id, payload.new);
+      }
+      notify();
+    }
+
+    function startSafetyNet(intervalMs) {
+      if (state.safetyIntervalId) clearInterval(state.safetyIntervalId);
+      state.safetyIntervalId = setInterval(resync, intervalMs);
+    }
+
+    startSafetyNet(8000); // covers the gap until the channel below confirms SUBSCRIBED
+    resync().then(() => {
+      sb()
+        .channel(`live:${table}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table }, applyChange)
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            startSafetyNet(60000); // realtime is doing the real work now — this just guards a missed event
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            // Realtime connection down — resync more often until it
+            // recovers, rather than going dark on catalog updates.
+            startSafetyNet(8000);
+          }
+        });
+    });
+
+    liveTables.set(path, state);
+    return state;
   }
 
   // ---- Path -> API handler resolution -------------------------------
@@ -696,6 +833,25 @@
     }
 
     on(event, cb) {
+      // apps/categories: route to the shared realtime-backed cache instead
+      // of starting another independent 3s poll (see getLiveTable above).
+      // Only the plain "value" case is special-cased — this app never
+      // attaches "child_changed" (or a query like orderByChild/limitToLast)
+      // to these two paths, so the general poll path below still exists
+      // for that as a documented fallback if that ever changes.
+      if (event === 'value' && LIVE_TABLE_CONFIG[this.path] && !this.query.orderField && !this.query.equalValue && !this.query.limit) {
+        const state = getLiveTable(this.path);
+        state.listeners.add(cb);
+        if (state.ready) {
+          const out = {};
+          state.rows.forEach((row, id) => { out[id] = row; });
+          cb(makeSnapshot(this.path, out));
+        }
+        if (!this._listeners.has(event)) this._listeners.set(event, new Set());
+        this._listeners.get(event).add({ cb, liveState: state });
+        return cb;
+      }
+
       const handler = buildHandler(this.path, this.query);
       let prevJson = null;
       let consecutiveFailures = 0;
@@ -770,7 +926,8 @@
       if (!set) return;
       set.forEach((entry) => {
         if (!cb || entry.cb === cb) {
-          clearInterval(entry.intervalId);
+          if (entry.intervalId) clearInterval(entry.intervalId);
+          if (entry.liveState) entry.liveState.listeners.delete(entry.cb);
           set.delete(entry);
         }
       });
@@ -910,7 +1067,32 @@
   auth.Auth = { Persistence: { LOCAL: 'LOCAL', SESSION: 'SESSION', NONE: 'NONE' } };
 
   function database() {
-    return { ref: (path) => new RefShim(path) };
+    return {
+      ref: (path) => new RefShim(path),
+      // Server-side product search — replaces filtering the full
+      // in-memory `allApps` array in index.html's runSearch(). The
+      // matching/sorting happens in Postgres (see migration-007's
+      // pg_trgm index on Product.title) and only the matching rows come
+      // back, instead of every client needing the entire catalog loaded
+      // just to be able to search it.
+      // `signal` (an AbortController's .signal) lets the caller cancel a
+      // still-in-flight search once a newer one supersedes it.
+      async searchProducts({ query, category, priceType, sortBy, limit = 300, signal } = {}) {
+        let q = sb().from('Product').select('*').eq('active', true).is('deletedAt', null);
+        if (query) q = q.ilike('title', `%${query}%`);
+        if (category) q = q.eq('category', category);
+        if (priceType) q = q.eq('priceType', priceType);
+        if (sortBy === 'newest') q = q.order('createdAt', { ascending: false });
+        else if (sortBy === 'popular') q = q.order('downloads', { ascending: false });
+        else if (sortBy === 'price-low') q = q.order('price', { ascending: true });
+        else q = q.order('price', { ascending: false }); // matches the previous default ("price-high")
+        q = q.limit(limit);
+        if (signal) q = q.abortSignal(signal);
+        const { data, error } = await q;
+        if (error) throw new Error(error.message);
+        return data || [];
+      },
+    };
   }
 
   // These paths are served by nexustore-backend (Express), not queried
@@ -1023,6 +1205,7 @@
     storage: {
       uploadAvatar: uploadAvatarFile,
       removeAvatar: removeAvatarFile,
+      uploadTicketImage: uploadTicketImage,
     },
   };
 })(window);
