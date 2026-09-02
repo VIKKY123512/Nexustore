@@ -344,6 +344,163 @@
                 color: var(--text-sub); font-size: 1.1rem; text-shadow: none;
                 pointer-events: none; z-index: 10;
             }
+            /* ---- Hero banner carousel -------------------------------------
+               Fixed aspect-ratio container so its height is known before any
+               image loads (no layout shift). Sliding is done with `transform:
+               translateX(...)` on .hero-track only — never left/margin/width —
+               so it's compositor-only work, same reasoning as .card below.
+               Mirrors .card's rounding/border/shadow and .skeleton-layer's
+               loading treatment so it reads as part of the same design system
+               instead of a bolted-on component. */
+            .hero-carousel {
+                position: relative;
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                max-height: 340px;
+                border-radius: 18px;
+                overflow: hidden;
+                background: var(--surface-variant);
+                border: 1px solid rgba(59, 130, 246, 0.16);
+                box-shadow: var(--shadow-card);
+                margin: 0 0 22px 0;
+                touch-action: pan-y; /* horizontal swipe handled by JS; vertical page scroll stays native */
+            }
+            .hero-track {
+                display: flex;
+                height: 100%;
+                width: 100%;
+                will-change: transform;
+                transition: transform 420ms cubic-bezier(0.2, 0.8, 0.3, 1);
+            }
+            .hero-track.no-anim { transition: none; } /* used only while the user is actively dragging */
+            .hero-slide {
+                position: relative;
+                flex: 0 0 100%;
+                width: 100%;
+                height: 100%;
+                cursor: pointer;
+            }
+            .hero-slide.not-clickable { cursor: default; }
+            .hero-slide img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                z-index: 1;
+                opacity: 0;
+                transition: opacity 0.25s ease;
+            }
+            .hero-slide img.loaded { opacity: 1; }
+            .hero-slide::after {
+                /* Legibility gradient so light-colored banner art still passes
+                   contrast under the title/subtitle/button — cheap (one
+                   gradient, no blur/filter) so it doesn't cost anything on
+                   low-end Android. */
+                content: "";
+                position: absolute;
+                inset: 0;
+                z-index: 2;
+                background: linear-gradient(to top, rgba(11, 18, 32, 0.92) 0%, rgba(11, 18, 32, 0.35) 55%, transparent 85%);
+                pointer-events: none;
+            }
+            .hero-content {
+                position: absolute;
+                left: 0; right: 0; bottom: 0;
+                z-index: 3;
+                padding: 16px 18px 18px;
+            }
+            .hero-badge {
+                display: inline-block;
+                font-size: 0.7rem;
+                font-weight: 800;
+                letter-spacing: 0.4px;
+                text-transform: uppercase;
+                color: #fff;
+                background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%);
+                padding: 4px 10px;
+                border-radius: 20px;
+                margin-bottom: 8px;
+            }
+            .hero-title {
+                font-size: 1.25rem;
+                font-weight: 800;
+                color: #fff;
+                margin: 0 0 4px 0;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+            }
+            .hero-subtitle {
+                font-size: 0.85rem;
+                color: rgba(255,255,255,0.85);
+                margin: 0 0 12px 0;
+                max-width: 85%;
+            }
+            .hero-cta {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 0.85rem;
+                font-weight: 700;
+                color: #fff;
+                background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%);
+                border: none;
+                border-radius: 12px;
+                padding: 9px 18px;
+            }
+            .hero-dots {
+                position: absolute;
+                bottom: 10px;
+                right: 14px;
+                z-index: 3;
+                display: flex;
+                gap: 6px;
+            }
+            .hero-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.4);
+                transition: background 0.2s ease, width 0.2s ease;
+            }
+            .hero-dot.active { background: #fff; width: 18px; border-radius: 4px; }
+            @media (prefers-reduced-motion: reduce) {
+                .hero-track { transition: none; }
+                .hero-slide img { transition: none; }
+            }
+            /* Quick-nav arrows on the category page: jump straight back to the
+               top of the list, or straight back to the last product you
+               opened, without a long manual scroll either direction. Sits
+               above the floating bottom-nav pill (which is bottom: 18px,
+               ~64px tall) so the two never overlap. */
+            .grid-nav-arrows {
+                position: fixed;
+                right: 16px;
+                bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+                z-index: 900;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .grid-nav-btn {
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                background: rgba(17, 24, 39, 0.75);
+                -webkit-backdrop-filter: blur(10px) saturate(140%);
+                backdrop-filter: blur(10px) saturate(140%);
+                color: #fff;
+                font-size: 1rem;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-shadow: var(--shadow-raised);
+                transition: transform 0.15s ease;
+            }
+            .grid-nav-btn:active { transform: scale(0.9); }
+            @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+                .grid-nav-btn { background: var(--surface); }
+            }
             .section-title {
                 font-weight: 800;
                 font-size: 1.2rem;
@@ -1237,8 +1394,16 @@
                         <div class="icon-btn"><i class="fas fa-arrow-left"></i></div>
                         <h3 style="margin: 0" id="cat-back-title">Categories</h3>
                     </div>
+                    <div id="hero-carousel" class="hero-carousel" style="display: none;">
+                        <div class="hero-track" id="hero-track"></div>
+                        <div class="hero-dots" id="hero-dots"></div>
+                    </div>
                     <h3 class="section-title" id="cat-page-title" style="margin-top: 0">Apps</h3>
                     <div id="cat-page-grid" class="grid"></div>
+                    <div class="grid-nav-arrows" id="cat-grid-nav-arrows" style="display: none;">
+                        <button type="button" class="grid-nav-btn" id="cat-nav-top-btn" title="Back to top" aria-label="Back to top"><i class="fas fa-arrow-up"></i></button>
+                        <button type="button" class="grid-nav-btn" id="cat-nav-last-btn" title="Return to last viewed product" aria-label="Return to last viewed product"><i class="fas fa-arrow-down"></i></button>
+                    </div>
                 </div>
                 <div id="wishlist-page" class="page-view">
                     <div class="section-title">WISHLIST</div>
@@ -1791,6 +1956,11 @@
                     const isScrolled = viewport.scrollTop > 8;
                     if (mainHeaderEl) mainHeaderEl.classList.toggle("scrolled", isScrolled);
                     if (searchBarWrapEl) searchBarWrapEl.classList.toggle("scrolled", isScrolled);
+                    // Quick-nav arrows only make sense on the category page's own
+                    // product grid, and only once there's actually somewhere to
+                    // jump to/from — reusing this already-throttled scroll tick
+                    // instead of adding a second scroll listener for it.
+                    if (activePage && activePage.id === "category-page") updateCatNavArrows();
                     scrollTicking = false;
                 });
             }, { passive: true });
@@ -1804,6 +1974,35 @@
                             el.classList.add("last-clicked");
                             setTimeout(() => el.classList.remove("last-clicked"), 2000);
                         }
+                    }
+                }, 50);
+            }
+            // For pages whose grid renders progressively in batches (category,
+            // search, wishlist): a raw pixel scrollTop from before is only
+            // trustworthy if the grid already has that many batches rendered —
+            // otherwise the browser clamps it to whatever height currently
+            // exists, which is what made a deeply-scrolled category page look
+            // like it "jumped back to the first product" after visiting one and
+            // pressing Back. Scrolling the actual last-clicked card into view
+            // instead is correct regardless of how many batches are loaded (the
+            // caller is responsible for making sure that card's batch has
+            // already been rendered — see ensureVisibleId on
+            // renderProductGridProgressive) and survives any height change
+            // above the grid (e.g. a hero banner appearing/disappearing).
+            // Scoped to gridId specifically because the same product can
+            // legitimately appear in more than one grid at once (its category
+            // page and, say, search results) — plain getElementById would
+            // return whichever one happens to be first in the document.
+            function restoreScrollToItem(pageId, gridId) {
+                setTimeout(() => {
+                    const grid = document.getElementById(gridId);
+                    const el = grid && lastClickedId ? grid.querySelector("#card-" + CSS.escape(lastClickedId)) : null;
+                    if (el) {
+                        el.scrollIntoView({ block: "center" });
+                        el.classList.add("last-clicked");
+                        setTimeout(() => el.classList.remove("last-clicked"), 2000);
+                    } else {
+                        viewport.scrollTop = scrollPos[pageId] !== undefined ? scrollPos[pageId] : 0;
                     }
                 }, 50);
             }
@@ -1833,6 +2032,17 @@
                 if (allowDataImage && /^data:image\//i.test(trimmed)) return trimmed;
                 if (!allowDataImage && /^\//.test(trimmed)) return trimmed; // relative path, e.g. a same-origin asset
                 return null;
+            }
+            // Escaping for HTML alone (escapeHtml) isn't enough for text that's
+            // going inside a single-quoted onclick="...('${x}')" attribute —
+            // it protects against attribute/tag breakout but a stray apostrophe
+            // in the value (e.g. a category named "Editor's Picks") still ends
+            // the JS string literal early and breaks the page. This escapes
+            // backslashes/quotes for JS first, then runs escapeHtml — the
+            // browser HTML-decodes the attribute before handing it to the JS
+            // parser, so the backslash-escape survives through to execution.
+            function jsStringLiteral(str) {
+                return escapeHtml(String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
             }
             // Backward-compat for messages sent before this session's fix, which
             // stored a raw '<img src="data:..." onclick="...">' HTML STRING as the
@@ -1937,6 +2147,7 @@
             let globalDownloadLimit = 5;
             let allApps = [];
             let globalCats = {};
+            let currentCategoryId = null; // which category page is open, if any — so the banners listener + nav arrows know what to do
             let msgListener = null;
             let msgQueryRef = null;
             let activeGateways = { tranzupi: true, spacepay: false }; // Default state
@@ -2647,6 +2858,7 @@
             window.addEventListener("popstate", (event) => {
                 suppressHistoryPush = true;
                 try {
+                    const hadOpenModal = !!document.querySelector(".modal.active");
                     // Close any open modal not matching the state we're returning to.
                     document.querySelectorAll(".modal.active").forEach((m) => {
                         if (!event.state || event.state.modal !== m.id) {
@@ -2655,6 +2867,15 @@
                     });
                     if (event.state && event.state.modal) {
                         toggleModal(event.state.modal, true);
+                    } else if (hadOpenModal) {
+                        // A modal (product detail, etc.) was open on top of
+                        // whatever page is already visible underneath — that
+                        // page was never actually left, so there's nothing to
+                        // re-render and no reason to touch its scroll position.
+                        // Falling through to openCategory()/navTo() here used
+                        // to rebuild the grid from scratch (and reset scroll)
+                        // on every single modal close.
+                        if (currentCategoryId) updateCatNavArrows();
                     } else if (event.state && event.state.page === "category" && event.state.catId) {
                         openCategory(event.state.catId, event.state.catName, true);
                     } else if (event.state && event.state.page) {
@@ -2701,7 +2922,184 @@
                     document.getElementById("search-input").dispatchEvent(new Event("input"));
                 }
             });
-            db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));            
+            // RLS already restricts what an anon session gets back here to
+            // active, in-date-range banners (see migration-009) — nothing
+            // further to filter client-side except which category page each
+            // one belongs to, done in renderHeroCarousel below.
+            let allHeroBanners = {};
+            db.ref("banners").on("value", (s) => {
+                allHeroBanners = s.val() || {};
+                if (currentCategoryId) renderHeroCarousel(currentCategoryId);
+            });
+            db.ref("config/downloadLimit").on("value", (s) => (globalDownloadLimit = s.val() || 5));
+
+            // ---------------- Hero banner carousel ----------------
+            let heroBanners = [];
+            let heroIndex = 0;
+            let heroAutoTimer = null;
+            let heroDragDeltaX = 0;
+            let heroHandlersBound = false;
+            const heroPrefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+            function renderHeroCarousel(categoryId) {
+                const container = document.getElementById("hero-carousel");
+                const track = document.getElementById("hero-track");
+                const dotsWrap = document.getElementById("hero-dots");
+                stopHeroAutoSlide();
+                heroBanners = Object.values(allHeroBanners)
+                    .filter((b) => b.categoryId === categoryId)
+                    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+                if (heroBanners.length === 0) {
+                    container.style.display = "none";
+                    track.innerHTML = "";
+                    dotsWrap.innerHTML = "";
+                    return;
+                }
+                container.style.display = "block";
+                heroIndex = Math.min(heroIndex, heroBanners.length - 1);
+                track.innerHTML = heroBanners.map((b, i) => buildHeroSlideHtml(b, i)).join("");
+                dotsWrap.innerHTML = heroBanners.length > 1
+                    ? heroBanners.map((_, i) => `<div class="hero-dot${i === heroIndex ? " active" : ""}" data-i="${i}"></div>`).join("")
+                    : "";
+                applyHeroTransform(false);
+                if (!heroHandlersBound) {
+                    initHeroTouchHandlers();
+                    heroHandlersBound = true;
+                }
+                // First slide's image is already eager-loaded via its real src
+                // attribute (see buildHeroSlideHtml); the rest only carry
+                // data-src so they don't compete with the catalog/category grid
+                // for bandwidth on first paint. Hydrate them shortly after,
+                // staggered, so a swipe still feels instant without ever being
+                // "required" for the page to load.
+                heroBanners.forEach((_, i) => {
+                    if (i === 0) return;
+                    setTimeout(() => ensureHeroImageLoaded(i), 500 + i * 250);
+                });
+                startHeroAutoSlide();
+            }
+
+            function buildHeroSlideHtml(b, i) {
+                const clickable = b.targetType && b.targetType !== "none";
+                const safeImg = safeUrl(b.imageUrl, { allowDataImage: true }) || "favicon.png";
+                const badgeHtml = b.badge ? `<span class="hero-badge">${escapeHtml(b.badge)}</span>` : "";
+                const subHtml = b.subtitle ? `<p class="hero-subtitle">${escapeHtml(b.subtitle)}</p>` : "";
+                const ctaHtml = clickable && b.buttonText ? `<span class="hero-cta">${escapeHtml(b.buttonText)} <i class="fas fa-arrow-right"></i></span>` : "";
+                return `<div class="hero-slide${clickable ? "" : " not-clickable"}" data-i="${i}">
+                    <img ${i === 0 ? `src="${safeImg}"` : `data-src="${safeImg}"`} loading="${i === 0 ? "eager" : "lazy"}" decoding="async" onload="this.classList.add('loaded')" onerror="this.classList.add('loaded')">
+                    <div class="hero-content">
+                        ${badgeHtml}
+                        <h3 class="hero-title">${escapeHtml(b.title || "")}</h3>
+                        ${subHtml}
+                        ${ctaHtml}
+                    </div>
+                </div>`;
+            }
+
+            function ensureHeroImageLoaded(i) {
+                const img = document.querySelector(`#hero-track .hero-slide[data-i="${i}"] img`);
+                if (img && !img.getAttribute("src") && img.dataset.src) img.setAttribute("src", img.dataset.src);
+            }
+
+            function applyHeroTransform(animate) {
+                const track = document.getElementById("hero-track");
+                if (!track) return;
+                track.classList.toggle("no-anim", !animate);
+                track.style.transform = `translateX(-${heroIndex * 100}%)`;
+            }
+
+            function goToHeroSlide(i) {
+                heroIndex = Math.max(0, Math.min(i, heroBanners.length - 1));
+                ensureHeroImageLoaded(heroIndex);
+                applyHeroTransform(true);
+                document.querySelectorAll("#hero-dots .hero-dot").forEach((d, idx) => d.classList.toggle("active", idx === heroIndex));
+            }
+
+            function startHeroAutoSlide() {
+                if (heroBanners.length <= 1 || heroPrefersReducedMotion) return;
+                const interval = heroBanners[heroIndex].autoSlideIntervalMs || 5000;
+                heroAutoTimer = setTimeout(() => {
+                    goToHeroSlide((heroIndex + 1) % heroBanners.length);
+                    startHeroAutoSlide();
+                }, interval);
+            }
+            function stopHeroAutoSlide() {
+                if (heroAutoTimer) { clearTimeout(heroAutoTimer); heroAutoTimer = null; }
+            }
+
+            function openHeroBannerTarget(b) {
+                if (!b || !b.targetType || b.targetType === "none") return;
+                if (b.targetType === "product" && b.targetId) {
+                    openDetail(b.targetId);
+                } else if (b.targetType === "category" && b.targetId) {
+                    const cat = globalCats ? globalCats[b.targetId] : null;
+                    if (cat) openCategory(b.targetId, cat.name);
+                } else if (b.targetType === "url") {
+                    const url = safeUrl(b.targetUrl);
+                    if (url) window.open(url, "_blank");
+                }
+            }
+
+            // Bound once — slides are rebuilt on every render, but the
+            // container/track/dots elements themselves are static, so event
+            // delegation here survives re-renders without re-attaching anything.
+            function initHeroTouchHandlers() {
+                const container = document.getElementById("hero-carousel");
+                const track = document.getElementById("hero-track");
+                let startX = 0, startY = 0, dragging = false, axis = null;
+
+                container.addEventListener("touchstart", (e) => {
+                    if (heroBanners.length <= 1) return;
+                    stopHeroAutoSlide();
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                    heroDragDeltaX = 0;
+                    dragging = true;
+                    axis = null;
+                }, { passive: true });
+
+                container.addEventListener("touchmove", (e) => {
+                    if (!dragging) return;
+                    const dx = e.touches[0].clientX - startX;
+                    const dy = e.touches[0].clientY - startY;
+                    if (!axis) axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+                    if (axis !== "x") return; // vertical intent — let the page scroll, don't fight it
+                    // Rubber-band past the first/last slide instead of dragging freely
+                    // into empty space.
+                    const atEdge = (heroIndex === 0 && dx > 0) || (heroIndex === heroBanners.length - 1 && dx < 0);
+                    heroDragDeltaX = atEdge ? dx * 0.3 : dx;
+                    track.classList.add("no-anim");
+                    track.style.transform = `translateX(calc(-${heroIndex * 100}% + ${heroDragDeltaX}px))`;
+                }, { passive: true });
+
+                container.addEventListener("touchend", () => {
+                    if (!dragging) return;
+                    dragging = false;
+                    const threshold = container.offsetWidth * 0.15;
+                    if (axis === "x" && Math.abs(heroDragDeltaX) > threshold) {
+                        goToHeroSlide(heroIndex + (heroDragDeltaX < 0 ? 1 : -1));
+                    } else {
+                        applyHeroTransform(true); // snap back to the current slide
+                    }
+                    startHeroAutoSlide();
+                }, { passive: true });
+
+                document.getElementById("hero-dots").addEventListener("click", (e) => {
+                    const dot = e.target.closest(".hero-dot");
+                    if (!dot) return;
+                    stopHeroAutoSlide();
+                    goToHeroSlide(parseInt(dot.dataset.i, 10));
+                    startHeroAutoSlide();
+                });
+
+                track.addEventListener("click", (e) => {
+                    if (Math.abs(heroDragDeltaX) > 10) return; // this click is the tail end of a swipe, not a tap
+                    const slideEl = e.target.closest(".hero-slide");
+                    if (!slideEl) return;
+                    openHeroBannerTarget(heroBanners[parseInt(slideEl.dataset.i, 10)]);
+                });
+            }
+
             function renderCategories() {
                 const grid = document.getElementById("cat-grid");
                 grid.innerHTML = "";
@@ -2715,7 +3113,8 @@
                     let out = [];
                     sorted.forEach(([k, c]) => {
                         if (c.active !== false) {
-                            out.push(` <div class="cat-card" onclick="openCategory('${k}', '${c.name}')"><div class="cat-img-wrap"><div class="skeleton-layer"></div><img src="${c.image}" class="skel-img" alt="${c.name}" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="cat-info"><div class="cat-name">${c.name}</div><i class="fas fa-chevron-right cat-arrow"></i></div></div>`);
+                            const safeImg = safeUrl(c.image, { allowDataImage: true }) || "favicon.png";
+                            out.push(` <div class="cat-card" onclick="openCategory('${k}', '${jsStringLiteral(c.name)}')"><div class="cat-img-wrap"><div class="skeleton-layer"></div><img src="${safeImg}" class="skel-img" alt="${escapeHtml(c.name)}" loading="lazy" decoding="async" onload="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')" onerror="this.previousElementSibling.style.opacity='0'; this.classList.add('loaded')"></div><div class="cat-info"><div class="cat-name">${escapeHtml(c.name)}</div><i class="fas fa-chevron-right cat-arrow"></i></div></div>`);
                         }
                     });
                     grid.innerHTML = out.join("");
@@ -2723,8 +3122,10 @@
                 if (grid.innerHTML === "")
                     grid.innerHTML = '<p style="text-align:center; color:var(--text-sub);">Empty</p>';
             }
+            let catNavHandlersBound = false;
             function openCategory(id, name, skipHistory) {
                 const grid = document.getElementById("cat-page-grid");
+                currentCategoryId = id;
                 document.getElementById("cat-page-title").innerText = name;
                 grid.innerHTML = getLoader();
                 document.querySelectorAll(".page-view").forEach((p) => p.classList.remove("active"));
@@ -2743,12 +3144,45 @@
                 if (!skipHistory) {
                     history.pushState({ page: "category", catId: id, catName: name }, "", "?category=" + encodeURIComponent(id));
                 }
+                renderHeroCarousel(id);
+                if (!catNavHandlersBound) {
+                    initCatNavArrows();
+                    catNavHandlersBound = true;
+                }
                 setTimeout(() => {
                     // Categories are flat now — always render this category's products directly.
                     const apps = allApps.filter((a) => (a.category || "").toLowerCase() === name.toLowerCase());
-                    renderProductGridProgressive(grid, apps, '<p style="grid-column:1/-1; text-align:center; color:#666;">No apps found.</p>');
-                    restoreScroll("category-page");
+                    renderProductGridProgressive(grid, apps, '<p style="grid-column:1/-1; text-align:center; color:#666;">No apps found.</p>', lastClickedId);
+                    restoreScrollToItem("category-page", "cat-page-grid");
+                    updateCatNavArrows();
                 }, 50);
+            }
+            // Bound once — the buttons themselves are static markup, only what
+            // they act on (currentCategoryId's grid) changes between opens.
+            function initCatNavArrows() {
+                document.getElementById("cat-nav-top-btn").addEventListener("click", () => {
+                    viewport.scrollTo({ top: 0, behavior: heroPrefersReducedMotion ? "auto" : "smooth" });
+                });
+                document.getElementById("cat-nav-last-btn").addEventListener("click", () => {
+                    const grid = document.getElementById("cat-page-grid");
+                    const el = lastClickedId ? grid.querySelector("#card-" + CSS.escape(lastClickedId)) : null;
+                    if (el) el.scrollIntoView({ block: "center", behavior: heroPrefersReducedMotion ? "auto" : "smooth" });
+                });
+            }
+            // Top arrow: only worth showing once the user has actually scrolled
+            // down some. Bottom/"last viewed" arrow: only if there's a
+            // last-clicked product to return to and it's actually in this grid
+            // (not just any product viewed anywhere in the app).
+            function updateCatNavArrows() {
+                const wrap = document.getElementById("cat-grid-nav-arrows");
+                const topBtn = document.getElementById("cat-nav-top-btn");
+                const lastBtn = document.getElementById("cat-nav-last-btn");
+                const grid = document.getElementById("cat-page-grid");
+                const showTop = viewport.scrollTop > 400;
+                const showLast = !!(lastClickedId && grid && grid.querySelector("#card-" + CSS.escape(lastClickedId)));
+                topBtn.style.display = showTop ? "flex" : "none";
+                lastBtn.style.display = showLast ? "flex" : "none";
+                wrap.style.display = showTop || showLast ? "flex" : "none";
             }
             // ---------------- Search: filters, category scoping, history ----------------
             const SEARCH_HISTORY_KEY = "nexustore_search_history";
@@ -3103,10 +3537,10 @@
                 saveScroll();
                 document.querySelectorAll(".page-view").forEach((p) => p.classList.remove("active"));
                 document.getElementById("wishlist-page").classList.add("active");
-                restoreScroll("wishlist-page");
                 const grid = document.getElementById("wishlist-grid");
                 const list = currentUser && currentUser.wishlist ? allApps.filter((a) => currentUser.wishlist.includes(a.id)) : [];
-                renderProductGridProgressive(grid, list, '<p style="text-align:center; color:var(--text-sub);">Empty</p>');
+                renderProductGridProgressive(grid, list, '<p style="text-align:center; color:var(--text-sub);">Empty</p>', lastClickedId);
+                restoreScrollToItem("wishlist-page", "wishlist-grid");
             }
             function toggleWish(id, btn) {
                 event.stopPropagation();
@@ -3556,7 +3990,7 @@
             let gridRenderGeneration = 0;
             const gridObservers = new Map(); // container id -> its active IntersectionObserver
 
-            function renderProductGridProgressive(container, apps, emptyMessage) {
+            function renderProductGridProgressive(container, apps, emptyMessage, ensureVisibleId) {
                 // Stop any in-flight progressive load already running on this
                 // container — otherwise switching category/search quickly
                 // could leave a stale observer alive, appending old results
@@ -3605,6 +4039,20 @@
                 );
                 observer.observe(sentinel);
                 gridObservers.set(container.id, observer);
+
+                // Returning to a product deep in this list (e.g. backing out of
+                // its detail modal) — render every batch up to and including it
+                // right away instead of waiting for the IntersectionObserver to
+                // reach it one scroll-triggered batch at a time. `observer` is
+                // already constructed above so renderNextBatch's internal
+                // `observer.disconnect()` (hit only if apps run out first) is
+                // safe to call from here.
+                if (ensureVisibleId) {
+                    const targetIndex = apps.findIndex((a) => a.id === ensureVisibleId);
+                    while (targetIndex !== -1 && renderedCount <= targetIndex && renderedCount < apps.length) {
+                        renderNextBatch();
+                    }
+                }
             }
             function quickBuy(id) {
                 const app = allApps.find(a => a.id === id);
