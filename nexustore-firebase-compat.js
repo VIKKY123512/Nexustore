@@ -345,6 +345,7 @@
   const LIVE_TABLE_CONFIG = {
     apps: { table: 'Product', orderField: 'position' },
     categories: { table: 'Category', orderField: 'position' },
+    banners: { table: 'Banner', orderField: 'displayOrder' },
   };
   const liveTables = new Map(); // path -> live table state
 
@@ -509,6 +510,25 @@
           if (row) await sbInsert('Trash', { id: row.id, entityType: 'category', entityId: row.id, payload: row });
           await sbUpdate('Category', 'id', id, { active: false, deletedAt: new Date().toISOString() });
         },
+      };
+    }
+
+    // banners -> Banner table (hero carousel). RLS already does the
+    // active/date-range filtering server-side (see migration-009) — what
+    // an anon session gets back from this select is exactly what's safe
+    // to show, no extra client-side filtering needed for that part.
+    if (path === 'banners') {
+      return {
+        get: async () => keyedObject(await sbSelect('Banner', (q) => q.order('displayOrder'))),
+        push: (v) => sbInsert('Banner', v),
+      };
+    }
+    if ((m = path.match(/^banners\/(.+)$/))) {
+      const id = m[1];
+      return {
+        setVal: (v) => sbUpdate('Banner', 'id', id, v),
+        updateVal: (v) => sbUpdate('Banner', 'id', id, v),
+        removeVal: () => sbDelete('Banner', 'id', id),
       };
     }
 
